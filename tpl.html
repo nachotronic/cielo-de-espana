@@ -333,6 +333,16 @@ const wc=$('wc'),wctx=wc.getContext('2d');let parts=[],gifRec=false,wView='',wRa
 function windAt(lon,lat){for(const g of GR){if(!g.u)return null;const fi=(lon-g.lon0)/g.d,fj=(lat-g.lat0)/g.d;if(fi<0||fj<0||fi>g.nx-1||fj>g.ny-1)continue;
   const i=Math.floor(fi),j=Math.floor(fj),i1=Math.min(i+1,g.nx-1),j1=Math.min(j+1,g.ny-1),a=fi-i,b=fj-j;
   const bil=f=>at(g,f,t,i,j)*(1-a)*(1-b)+at(g,f,t,i1,j)*a*(1-b)+at(g,f,t,i,j1)*(1-a)*b+at(g,f,t,i1,j1)*a*b;return {u:bil(g.u),v:bil(g.v)};}return null;}
+// soft edge for the particles: alpha ramps to 0 over the last cells of each data grid, like the coloured field,
+// so trails fade out at sea instead of stopping on a straight line (applied with destination-in every frame)
+let wMask=null,wMaskKey='';
+function windMask(){const key=wc.width+','+wc.height+','+OX+','+OY+','+S;if(key===wMaskKey)return wMask;wMaskKey=key;
+  wMask=wMask||document.createElement('canvas');wMask.width=wc.width;wMask.height=wc.height;const m=wMask.getContext('2d');m.clearRect(0,0,wMask.width,wMask.height);
+  for(const g of GR){const c=document.createElement('canvas');c.width=g.nx;c.height=g.ny;const x=c.getContext('2d'),im=x.createImageData(g.nx,g.ny),ramp=g.can?2:5;
+    for(let j=0;j<g.ny;j++)for(let i=0;i<g.nx;i++){const o=((g.ny-1-j)*g.nx+i)*4;im.data[o+3]=255*Math.min(1,Math.min(i,j,g.nx-1-i,g.ny-1-j)/ramp);}
+    x.putImageData(im,0,0);const [x0,y0]=pj(g.lon0-g.d/2,g.lat0+(g.ny-.5)*g.d,g.can),[x1,y1]=pj(g.lon0+(g.nx-.5)*g.d,g.lat0-g.d/2,g.can);
+    m.imageSmoothingEnabled=true;m.drawImage(c,(OX+x0*S)*DPR,(OY-y0*S)*DPR,(x1-x0)*S*DPR,(y0-y1)*S*DPR);}
+  return wMask;}
 function spawn(p){for(let k=0;k<6;k++){p.x=Math.random()*W;p.y=Math.random()*H;const g=fromScreen(p.x,p.y);p.can=g.can;if(windAt(g.lon,g.lat))break;}p.age=Math.random()*60|0;p.max=60+Math.random()*60|0;}
 let wLast=0;
 function windTick(now){wRaf=0;const fr=wLast&&now?Math.min(3,(now-wLast)/16.67):1;wLast=now||0;if(mode!=='wind'||!HAS.wind||reduce||gifRec){wctx.setTransform(1,0,0,1,0,0);wctx.clearRect(0,0,wc.width,wc.height);parts=[];return;}
@@ -350,7 +360,8 @@ function windTick(now){wRaf=0;const fr=wLast&&now?Math.min(3,(now-wLast)/16.67):
     bins[b].moveTo(p.x,p.y);bins[b].lineTo(nx,ny);p.x=nx;p.y=ny;if(nx<0||ny<0||nx>W||ny>H)spawn(p);}
   // light wind: slate grey on the light map, pale grey on the dark one (white/light grey vanish on light land)
   PCOL[0][1]=css('--ink')==='#e8ecec'?'#d5dade':'#6f7d88';
-  bins.forEach((pa,i)=>{wctx.strokeStyle=PCOL[i][1];wctx.globalAlpha=.95;wctx.stroke(pa);});wctx.globalAlpha=1;wRaf=requestAnimationFrame(windTick);}
+  bins.forEach((pa,i)=>{wctx.strokeStyle=PCOL[i][1];wctx.globalAlpha=.95;wctx.stroke(pa);});wctx.globalAlpha=1;
+  wctx.save();wctx.setTransform(1,0,0,1,0,0);wctx.globalCompositeOperation='destination-in';wctx.drawImage(windMask(),0,0);wctx.restore();wRaf=requestAnimationFrame(windTick);}
 // light wind (< 15 km/h) in slate grey (theme-dependent, see windTick), so calm reads as faint rather than as a strong dark stroke
 const PCOL=[[0,'#6f7d88'],[15,'#2a8fb5'],[25,'#1f9e8a'],[35,'#3f9e3f'],[50,'#d4a500'],[70,'#e0701c'],[90,'#c8203c']];
 function windKick(){if(!wRaf)wRaf=requestAnimationFrame(windTick);}
