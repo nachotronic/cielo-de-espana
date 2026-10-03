@@ -74,7 +74,8 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 .zoom{position:absolute;left:20px;top:50%;transform:translateY(-50%);display:grid;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .zoom button{width:34px;height:34px;border:0;background:transparent;color:var(--ink);font:500 18px var(--sans);cursor:pointer}.zoom button+button{border-top:1px solid var(--line)}.zoom button:hover{background:var(--line)}.zoom button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .stale{color:var(--accent)}
-.legend #src{display:none}
+.legend #src{display:none}#infoBtn{display:none}
+#infoBtn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--soft);font:600 13px var(--display);cursor:pointer;flex:none}
 @media (max-width:640px){
   .head{left:12px}.legend{right:12px;left:12px;top:auto;bottom:calc(128px + env(safe-area-inset-bottom,0px));width:auto;padding:7px 10px}
   .layers{left:12px;right:12px;top:calc(56px + env(safe-area-inset-top,0px));justify-content:space-between}.layers button{padding:6px 8px;flex:1}.layers .l{display:none}.layers .s{display:inline}
@@ -86,7 +87,9 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   .legend{font-size:13px;gap:8px;padding:11px 14px}.legend .t{font-size:14px}.legend .ramp{height:10px;border-radius:3px}.legend .ticks{font-size:11px}.legend .ticks.abs{height:14px}
   .legend input[type=checkbox]{width:18px;height:18px}.legend #src,.legend #lgSub{font-size:12px!important;line-height:1.4}.accwin button{font-size:13px;padding:10px 0}
   #play{width:52px;height:52px;font-size:19px}.when{font-size:13px;padding-right:178px}#avBtn,#gifBtn{font-size:13px;padding:7px 12px}#avBtn{right:76px}input[type=range]{height:28px}
-  .legend{bottom:calc(156px + env(safe-area-inset-bottom,0px))}.zoom{top:calc(136px + env(safe-area-inset-top,0px))}
+  .legend{bottom:calc(156px + env(safe-area-inset-bottom,0px))}
+  /* the explanatory notes hide behind the ⓘ button so the legend stays short */
+  #infoBtn{display:inline-block;margin-left:auto}.legend:not(.info) #lgSub,.legend:not(.info) #src{display:none!important}.legend.info #note,.legend.info .hint{display:block}.legend.info #src{display:none!important}.legend.info~.zoom{display:none}.zoom{top:calc(136px + env(safe-area-inset-top,0px))}
   .zoom{left:auto;right:12px;top:calc(140px + env(safe-area-inset-top,0px));transform:none;display:flex}.zoom button{width:46px;height:46px;font-size:22px}.zoom button+button{border-top:0;border-left:1px solid var(--line)}
   .accwin button{padding:9px 0;font-size:10.5px;white-space:nowrap}.legend #src{display:block}
 }
@@ -111,7 +114,7 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   </div>
   <div id="lgOther" style="display:grid;gap:5px" hidden><div class="t"><span id="lgT"></span><span id="lgU"></span></div><div class="ramp" id="rampO"></div><div class="ticks abs" id="ticksO"></div><div class="accwin" id="accWin" hidden role="group" aria-label="Horas acumuladas"><button data-h="1">1 h</button><button data-h="3">3 h</button><button data-h="6" aria-pressed="true">6 h</button><button data-h="12">12 h</button><button data-h="24">24 h</button></div><div class="note" id="lgSub" style="display:block"></div></div>
   <div id="avLeg" hidden><div class="t"><span>Avisos AEMET</span></div><div class="note" id="avN" style="margin:-2px 0 4px"></div><div class="avleg"><span><i style="background:rgba(242,197,0,.14);border:2px solid #f2c500"></i>Amarillo</span><span><i style="background:rgba(240,138,0,.18);border:2px solid #f08a00"></i>Naranja</span><span><i style="background:rgba(214,32,42,.22);border:2px solid #d6202a"></i>Rojo</span></div></div>
-  <div class="t"><label><input type="checkbox" id="lMun">Municipios</label><span id="munHint" class="note" style="font-weight:400"></span></div>
+  <div class="t"><label><input type="checkbox" id="lMun">Municipios</label><span id="munHint" class="note" style="font-weight:400"></span><button id="infoBtn" aria-expanded="false" aria-label="Más información sobre los datos">i</button></div>
   <div class="note" id="note"></div><div class="note" id="src"></div>
   <div class="note hint">Rueda o pellizco para acercar, arrastra para moverte, doble clic para volver.</div>
 </aside>
@@ -466,19 +469,21 @@ function clampView(){const m=60,[x0,y0]=[OX+BB[0]*S,OY-BB[3]*S],[x1,y1]=[OX+BB[2
   if(x1<m)OX+=m-x1;if(x0>W-m)OX-=x0-(W-m);if(y1<m)OY+=m-y1;if(y0>H-m)OY-=y0-(H-m);}
 cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0018)));},{passive:false});
 cv.addEventListener('dblclick',()=>fit());
-const ptrs=new Map();let pinch0=null,dragged=false;
+const ptrs=new Map();let pinch0=null,dragged=false,hadPinch=false;
 cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY});dragged=false;
-  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:S};}
-  tipPt={x:e.clientX,y:e.clientY};refreshTip();});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:S};hadPinch=true;tipPt=null;refreshTip();}
+  // touch shows the tooltip on a clean tap (pointerup), so pinching or dragging never opens it
+  if(e.pointerType!=='touch'){tipPt={x:e.clientX,y:e.clientY};refreshTip();}});
 cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);
   if(p){const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
     if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];zoomAt((a.x+b.x)/2,(a.y+b.y)/2,pinch0.s*Math.hypot(a.x-b.x,a.y-b.y)/pinch0.d/S);return;}
     // a few pixels of finger wobble is a tap, not a drag
     if(!dragged&&Math.hypot(e.clientX-p.x0,e.clientY-p.y0)<7){p.x-=dx;p.y-=dy;return;}
     if(Math.abs(dx)+Math.abs(dy)>0){dragged=true;OX+=dx;OY+=dy;clampView();draw();cv.style.cursor='grabbing';tipPt=null;refreshTip();return;}}
-  tipPt={x:e.clientX,y:e.clientY};refreshTip();});
-const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;cv.style.cursor='';};
-cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+  if(e.pointerType!=='touch'){tipPt={x:e.clientX,y:e.clientY};refreshTip();}});
+const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;cv.style.cursor='';if(!ptrs.size)setTimeout(()=>{if(!ptrs.size)hadPinch=false;},50);};
+// a tap toggles the tooltip on touch screens (tap the same spot again, or anywhere after it shows, to close it)
+cv.addEventListener('pointerup',e=>{if(e.pointerType==='touch'&&!dragged&&!hadPinch&&ptrs.size===1){tipPt=tip.style.display==='block'?null:{x:e.clientX,y:e.clientY};refreshTip();}endPtr(e);});cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){tipPt=null;refreshTip();}});
 // ---- GIF export: records the current view between two hours. Self-contained GIF89a encoder:
 // median-cut palette shared by all frames (so colours don't flicker), LZW per frame.
@@ -544,6 +549,7 @@ const rethemed=()=>{paintRelief();$('rampC').style.background=`linear-gradient(9
 new MutationObserver(rethemed).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 // resizing keeps the place and zoom you were looking at; dblclick or ⌂ re-frames Spain
 addEventListener('resize',()=>{if(!S0){fit();return;}const z=S/S0,c=fromScreen(W/2,H/2),[X,Y]=pj(c.lon,c.lat,c.can);fit();if(z>1.01){S=S0*z;const [sx,sy]=toScreen(X,-Y);OX+=W/2-sx;OY+=H/2-sy;clampView();draw();}});
+$('infoBtn').onclick=()=>{const l=document.querySelector('.legend'),o=l.classList.toggle('info');$('infoBtn').setAttribute('aria-expanded',o);};
 $('zIn').onclick=()=>zoomAt(W/2,H/2,1.6);$('zOut').onclick=()=>zoomAt(W/2,H/2,1/1.6);$('zHome').onclick=()=>fit();
 // open on the current hour
 // open at the real current hour when the data covers it
