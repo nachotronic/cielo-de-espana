@@ -1,4 +1,7 @@
+<!doctype html>
+<html lang="es">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Cielo de España</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -77,7 +80,14 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   .layers{left:12px;right:12px;top:calc(56px + env(safe-area-inset-top,0px));justify-content:space-between}.layers button{padding:6px 8px;flex:1}.layers .l{display:none}.layers .s{display:inline}
   .legend .note{display:none}.legend #avN{display:block}h1{font-size:28px}.when{padding-right:132px}.when .hp{display:none}
   #tip{left:12px!important;right:12px;width:auto;top:calc(110px + env(safe-area-inset-top,0px))!important}
-  .zoom{left:auto;right:12px;top:calc(104px + env(safe-area-inset-top,0px));transform:none;display:flex}.zoom button{width:38px;height:38px}.zoom button+button{border-top:0;border-left:1px solid var(--line)}
+  /* phone: bigger, easier controls (they fill the sea a portrait screen leaves above and below Spain) */
+  .layers{top:calc(58px + env(safe-area-inset-top,0px));padding:4px}.layers button{font-size:15px;padding:11px 6px}
+  .zoom{top:calc(124px + env(safe-area-inset-top,0px))}.zoom button{width:46px;height:46px;font-size:22px}
+  .legend{font-size:13px;gap:8px;padding:11px 14px}.legend .t{font-size:14px}.legend .ramp{height:10px;border-radius:3px}.legend .ticks{font-size:11px}.legend .ticks.abs{height:14px}
+  .legend input[type=checkbox]{width:18px;height:18px}.legend #src,.legend #lgSub{font-size:12px!important;line-height:1.4}.accwin button{font-size:13px;padding:10px 0}
+  #play{width:52px;height:52px;font-size:19px}.when{font-size:13px;padding-right:178px}#avBtn,#gifBtn{font-size:13px;padding:7px 12px}#avBtn{right:76px}input[type=range]{height:28px}
+  .legend{bottom:calc(156px + env(safe-area-inset-bottom,0px))}.zoom{top:calc(136px + env(safe-area-inset-top,0px))}
+  .zoom{left:auto;right:12px;top:calc(140px + env(safe-area-inset-top,0px));transform:none;display:flex}.zoom button{width:46px;height:46px;font-size:22px}.zoom button+button{border-top:0;border-left:1px solid var(--line)}
   .accwin button{padding:9px 0;font-size:10.5px;white-space:nowrap}.legend #src{display:block}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -253,7 +263,8 @@ const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
 function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
   const mob=W<=640;let top=mob?64:52,bot=mob?170:100;
   // portrait phone: use the space between the layer buttons and the legend strip
-  if(MOB0&&mob){const lr=document.querySelector('.layers').getBoundingClientRect(),gr=document.querySelector('.legend').getBoundingClientRect();top=lr.bottom+8;bot=H-gr.top+8;}const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
+  if(MOB0&&mob){const lr=document.querySelector('.layers').getBoundingClientRect(),gr=document.querySelector('.legend').getBoundingClientRect();top=lr.bottom+8;bot=H-gr.top+8;
+    const zm=document.querySelector('.zoom');zm.style.top=(gr.top-zm.offsetHeight-10)+'px';}const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
   S0=S;OX=(W-(BB[2]-BB[0])*S)/2-BB[0]*S+(mob?0:Math.min(40,(W-16-(BB[2]-BB[0])*S)/2));OY=top+((H-top-bot)-(BB[3]-BB[1])*S)/2+BB[3]*S;draw();}
 const toScreen=(X,Y)=>[OX+X*S,OY+Y*S];
 function fromScreen(px,py){const X=(px-OX)/S,Y=-(py-OY)/S;
