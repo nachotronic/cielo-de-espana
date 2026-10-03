@@ -435,7 +435,7 @@ function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromSc
     const x=tipPt.x+16+w>W-10?tipPt.x-16-w:tipPt.x+16,y=tipPt.y+16+h>bot?tipPt.y-16-h:tipPt.y+16;
     tip.style.left=Math.max(10,x)+'px';tip.style.top=Math.max(10,Math.min(y,bot-h))+'px';}}
 // ---- zoom & pan: wheel or pinch zooms around the pointer, drag pans, double-click resets
-function zoomAt(px,py,k){const z=Math.max(1,Math.min(20,S*k/S0));k=z*S0/S;OX=px-(px-OX)*k;OY=py-(py-OY)*k;S*=k;clampView();draw();refreshTip();}
+function zoomAt(px,py,k){const z=Math.max(1,Math.min(40,S*k/S0));k=z*S0/S;OX=px-(px-OX)*k;OY=py-(py-OY)*k;S*=k;clampView();draw();refreshTip();}
 function clampView(){const m=60,[x0,y0]=[OX+BB[0]*S,OY-BB[3]*S],[x1,y1]=[OX+BB[2]*S,OY-BB[1]*S];
   if(x1<m)OX+=m-x1;if(x0>W-m)OX-=x0-(W-m);if(y1<m)OY+=m-y1;if(y0>H-m)OY-=y0-(H-m);}
 cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0018)));},{passive:false});
