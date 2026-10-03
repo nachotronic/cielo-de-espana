@@ -61,6 +61,12 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 #tip .stats em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
 #tip .stats svg{width:11px;height:11px;vertical-align:-1px;margin-left:3px}
 #tip .est{margin-top:7px;font-size:10px;color:var(--soft)}
+#tip .chart{margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}#tip .ch{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--soft);margin-bottom:3px}
+#tip .ch b{font-weight:600}#tip .ct{color:var(--accent)}#tip .cp{color:#3c8cdc}
+#tip svg{display:block;width:100%;height:64px;overflow:visible}#tip svg .tl{fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+#tip svg .pr{fill:#3c8cdc;opacity:.75}#tip svg .mid{stroke:var(--line);stroke-dasharray:2 2;vector-effect:non-scaling-stroke}#tip svg .ax{stroke:var(--line);vector-effect:non-scaling-stroke}
+#tip svg .now{stroke:var(--ink);stroke-width:1;opacity:.5;vector-effect:non-scaling-stroke}#tip svg .dot{fill:var(--accent);stroke:var(--glass);stroke-width:1}
+#tip svg .lb{font:9px var(--sans);fill:var(--soft)}
 #tip .ex{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:11.5px}#tip .ex span:first-child{color:var(--soft)}#tip .ex span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
 #tip .av{margin-top:8px;padding-top:7px;border-top:1px solid var(--line);display:grid;gap:4px;font-size:11.5px}#tip .av div{display:flex;gap:6px;align-items:baseline}#tip .av i{flex:none;width:9px;height:9px;border-radius:2px;transform:translateY(1px)}
 .note{font-size:9.5px;line-height:1.4;color:var(--soft)}
@@ -448,6 +454,20 @@ const tip=$('tip');let tipPt=null;
 function provAt(lon,lat,can){for(const p of provPaths){if(p.can!==can)continue;let inside=false;for(const r of p.rings){for(let i=0,j=r.length-1;i<r.length;j=i++){const [xi,yi]=r[i],[xj,yj]=r[j];if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)inside=!inside;}}if(inside)return GEO.names[p.c];}return null;}
 // where the wind comes from, as a Spanish compass point
 function compass(u,v){if(Math.hypot(u,v)<1)return 'calma';const a=(Math.atan2(-u,-v)*180/Math.PI+360)%360;return 'del '+['N','NE','E','SE','S','SO','O','NO'][Math.round(a/45)%8];}
+// hourly outlook for the tooltip: temperature line over precipitation bars, from the current hour to the end of the forecast
+const fmtHr=new Intl.DateTimeFormat('es-ES',{hour:'numeric',hourCycle:'h23',timeZone:'Europe/Madrid'}),fmtWd=new Intl.DateTimeFormat('es-ES',{weekday:'short',timeZone:'Europe/Madrid'});
+function tipChart(lon,lat){const k0=Math.max(NOW,Math.min(WX.T-2,nowK())),k1=WX.T-1,n=k1-k0+1;if(n<6)return '';
+  const T=[],P=[];for(let k=k0;k<=k1;k++){const v=valueAt(lon,lat,k);if(!v)return '';T.push(v.temp);P.push(v.rain);}
+  const hasT=T[0]!=null,W2=240,top=14,bot=58,x=i=>4+i*(W2-8)/(n-1);
+  const tmin=hasT?Math.min(...T):0,tmax=hasT?Math.max(...T):1,span=Math.max(4,tmax-tmin),y=v=>top+(bot-6-top)*(1-(v-(tmin+tmax)/2+span/2)/span);
+  const pmax=Math.max(...P),ps=Math.max(2,pmax),bw=Math.max(1.5,(W2-8)/n-1);
+  let g='';
+  for(let i=0;i<n;i++){const d=new Date(t0+(k0+i)*WX.step*1000);if(fmtHr.format(d)==='0'&&i>0)g+=`<line x1="${x(i)}" x2="${x(i)}" y1="${top-2}" y2="${bot}" class="mid"/><text x="${x(i)+3}" y="${top-4}" class="lb">${fmtWd.format(d)}</text>`;}
+  P.forEach((p,i)=>{if(p>=0.1){const h=Math.max(1.5,(p/ps)*24);g+=`<rect x="${(x(i)-bw/2).toFixed(1)}" y="${(bot-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" class="pr"/>`;}});
+  if(hasT)g+=`<polyline points="${T.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}" class="tl"/>`;
+  const ks=Math.round(t)-k0;if(ks>=0&&ks<n)g+=`<line x1="${x(ks)}" x2="${x(ks)}" y1="${top-2}" y2="${bot}" class="now"/>`+(hasT?`<circle cx="${x(ks)}" cy="${y(T[ks])}" r="2.6" class="dot"/>`:'');
+  const f1=v=>v.toFixed(1).replace('.',',');
+  return `<div class="chart"><div class="ch"><span>Próximas ${n} h</span><span>${hasT?`<b class="ct">${Math.round(tmin)}–${Math.round(tmax)} °C</b>`:''}${pmax>=0.1?` · <b class="cp">${f1(pmax)} mm/h máx</b>`:' · sin lluvia'}</span></div><svg viewBox="0 0 ${W2} ${bot+2}" preserveAspectRatio="none" aria-hidden="true">${g}<line x1="2" x2="${W2-2}" y1="${bot}" y2="${bot}" class="ax"/></svg></div>`;}
 function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromScreen(tipPt.x,tipPt.y);const v=valueAt(g.lon,g.lat,t);if(!v){tip.style.display='none';return;}
   const name=provAt(g.lon,g.lat,g.can),pp=name&&provPaths.find(p=>GEO.names[p.c]===name&&p.can===g.can),pm=pp&&PROV_MODES[mode]?provMean(pp,PROV_MODES[mode])??0:0;const mm=v.rain;
   const mn=munAt(g.lon,g.lat);
@@ -458,7 +478,7 @@ function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromSc
     `<div class="hero">${v.temp!=null?`<div class="tv">${Math.round(v.temp)}<sup>°C</sup></div>`:''}<div class="sky"><strong>${sky}</strong>${rainTxt}</div></div>`+
     `<div class="stats"><div><span>Nubes</span><em>${Math.round(v.cloud)} %</em></div><div><span>Precip.</span><em>${mm<0.1?'0':f1(mm)} mm/h</em></div>${v.ws!=null?`<div><span>Viento</span><em>${Math.round(v.ws)} km/h${arrow}</em></div>`:''}</div>`+
     (mode==='acc'?`<div class="ex"><span>Acumulada ${accWin} h</span><span>${v.acc<0.1?'0':f1(v.acc)} mm</span></div>`:'')+
-    `<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
+    tipChart(g.lon,g.lat)+`<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
   if(showAv){const ws=avAt(g.lon,g.lat,g.can),seen=new Set();if(ws.length)tip.innerHTML+=`<div class="av"><div style="color:var(--soft)">${ws[0].zn}</div>${ws.filter(w=>{const k=w.ph+w.d;if(seen.has(k))return false;seen.add(k);return true;}).map(w=>`<div><i style="background:rgb(${AVCOL[w.lv]})"></i><span><b style="display:inline;font:500 12px var(--sans);text-transform:none;letter-spacing:0">${w.ph} · ${AVNAME[w.lv]}</b> ${w.d} Hasta ${fmtDay.format(new Date(w.b+1000))===fmtDay.format(new Date(hourMs()))?'las '+fmtH.format(new Date(w.b+1000)):'el '+fmtDay.format(new Date(w.b+1000))+', '+fmtH.format(new Date(w.b+1000))}.</span></div>`).join('')}</div>`;}
   tip.style.display='block';if(W>640){const w=tip.offsetWidth,h=tip.offsetHeight,bot=document.querySelector('.dock').getBoundingClientRect().top-8;
     const x=tipPt.x+16+w>W-10?tipPt.x-16-w:tipPt.x+16,y=tipPt.y+16+h>bot?tipPt.y-16-h:tipPt.y+16;
