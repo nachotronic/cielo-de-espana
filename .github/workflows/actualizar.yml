@@ -1,0 +1,51 @@
+# Rebuilds the map with fresh Open-Meteo forecast and AEMET warnings and publishes it on GitHub Pages.
+# Every 6 h: ~1.5k Open-Meteo locations per run, so 4 runs a day stay inside the free daily quota.
+name: Actualizar mapa
+on:
+  schedule:
+    - cron: '50 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      AEMET_API_KEY: ${{ secrets.AEMET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Previsión de Open-Meteo
+        run: node wx.js
+      # warnings are optional: without the secret, or if AEMET is down, the map is built without the AVISOS layer
+      - name: Avisos de AEMET
+        if: ${{ env.AEMET_API_KEY != '' }}
+        continue-on-error: true
+        run: node avisos.js
+      - name: Montar la página
+        run: |
+          node build.js
+          mkdir -p _site
+          cp cielo.html _site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

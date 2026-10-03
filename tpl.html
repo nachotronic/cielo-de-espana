@@ -1,0 +1,527 @@
+<meta charset="utf-8">
+<title>Cielo de España</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: full-bleed map canvas; title top-left, controls docked bottom as a timeline strip, compact legend bottom-right above it. */
+:root{
+  --sea:#a6d6d4;--sea2:#7dbcbf;--land:#d9d6b8;--border:rgba(70,60,40,.35);--coast:#3d6f73;--shadow:rgba(20,70,72,.3);--halo:rgba(255,255,255,.85);
+  --ink:#1f2a30;--soft:#5e6b72;--glass:rgba(247,248,246,.88);--line:rgba(31,42,48,.14);--accent:#d9572b;
+  --cloud:255,255,255;--cloudShade:176,188,202;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;--sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--sea:#10292c;--sea2:#08191b;--land:#2f3229;--border:rgba(230,220,200,.22);--coast:#5aa3a2;--shadow:rgba(0,0,0,.6);--halo:rgba(10,20,24,.8);--ink:#e8ecec;--soft:#9aa7ad;--glass:rgba(20,26,30,.86);--line:rgba(232,236,236,.14);--accent:#f07a4a;--cloud:226,232,238;--cloudShade:120,134,150;color-scheme:dark}}
+:root[data-theme="dark"]{--sea:#10292c;--sea2:#08191b;--land:#2f3229;--border:rgba(230,220,200,.22);--coast:#5aa3a2;--shadow:rgba(0,0,0,.6);--halo:rgba(10,20,24,.8);--ink:#e8ecec;--soft:#9aa7ad;--glass:rgba(20,26,30,.86);--line:rgba(232,236,236,.14);--accent:#f07a4a;--cloud:226,232,238;--cloudShade:120,134,150;color-scheme:dark}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--sea);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.head{position:absolute;left:20px;top:calc(16px + env(safe-area-inset-top,0px));max-width:min(380px,calc(100vw - 40px));pointer-events:none}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,3.4vw,42px);line-height:.95;letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+.when{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.badge{display:inline-block;margin-top:8px;padding:3px 8px;border-radius:4px;background:var(--accent);color:#fff;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.legend{position:absolute;right:20px;bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:10.5px;color:var(--soft);display:grid;gap:5px;width:168px}
+.legend .t{color:var(--ink);font-size:11px;font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.legend label{display:flex;gap:6px;align-items:center;cursor:pointer}.legend input{margin:0;accent-color:var(--accent)}
+.ramp{height:6px;border-radius:2px}
+.ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;font-variant-numeric:tabular-nums}
+.ticks.abs{display:block;position:relative;height:11px}.ticks.abs span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}.ticks.abs span:first-child{transform:none}.ticks.abs span:last-child{transform:translateX(-100%)}
+.dock{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center}
+#play{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--sea);font-size:15px;cursor:pointer;grid-row:span 3}
+#play:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.days{position:relative;height:14px;font-family:var(--mono);font-size:10.5px;color:var(--soft)}
+.days span{position:absolute;white-space:nowrap;transform:translateX(-50%)}
+.days span.d{color:var(--ink);transform:none;padding-left:4px;border-left:1px solid var(--line)}
+#gifBtn{position:absolute;right:12px;top:8px;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 11px var(--mono);letter-spacing:.06em;padding:4px 9px;border-radius:5px;cursor:pointer}
+#gifBtn:hover,#gifBtn[aria-expanded=true]{background:var(--ink);color:var(--sea)}
+#avBtn{position:absolute;right:62px;top:8px;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 11px var(--mono);letter-spacing:.06em;padding:4px 9px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:6px}
+#avBtn i{width:8px;height:8px;border-radius:2px;background:linear-gradient(90deg,#f2c500 33%,#f08a00 33% 66%,#d6202a 66%)}
+#avBtn:hover,#avBtn[aria-pressed=true]{background:var(--ink);color:var(--sea)}
+.avleg{display:flex;gap:8px;flex-wrap:wrap;font-size:10.5px;color:var(--ink)}.avleg span{display:flex;align-items:center;gap:4px}.avleg i{width:10px;height:10px;border-radius:2px;border:1.5px solid}
+.gifpanel{position:absolute;right:12px;bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:5;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:min(300px,calc(100vw - 24px));font-size:12px;display:grid;gap:9px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
+.gifpanel h2{font:600 17px var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.gifpanel .row{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px}
+.gifpanel select{font:12px var(--sans);color:var(--ink);background:var(--glass);border:1px solid var(--line);border-radius:5px;padding:4px 6px;min-width:0}
+.gifpanel .go{font:500 13px var(--sans);background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px;cursor:pointer}.gifpanel .go:disabled{opacity:.6;cursor:progress}
+.gifpanel img{max-width:100%;border-radius:6px;border:1px solid var(--line)}
+.gifpanel .st{color:var(--soft);font-size:11px;min-height:1em}
+#tip{position:absolute;z-index:20;pointer-events:none;display:none;background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:12px;padding:11px 13px 10px;font-size:12px;line-height:1.4;width:250px;box-shadow:0 8px 28px rgba(0,0,0,.16)}
+#tip .hd b{font-family:var(--display);font-weight:600;font-size:18px;line-height:1.1;display:block;overflow-wrap:anywhere}
+#tip .hd small{display:block;color:var(--soft);font-size:11px;margin-top:2px}
+#tip .hero{display:flex;align-items:center;gap:10px;margin:8px 0 9px}
+#tip .hero .tv{font-family:var(--display);font-weight:600;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+#tip .hero .tv sup{font-size:15px;font-weight:500;vertical-align:top;margin-left:1px}
+#tip .hero .sky{color:var(--soft);font-size:12px;line-height:1.3}
+#tip .hero .sky strong{display:block;color:var(--ink);font-weight:600;font-size:13px}
+#tip .stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);padding-top:8px;gap:4px}
+#tip .stats div{display:grid;gap:1px}#tip .stats span{color:var(--soft);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+#tip .stats em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
+#tip .stats svg{width:11px;height:11px;vertical-align:-1px;margin-left:3px}
+#tip .est{margin-top:7px;font-size:10px;color:var(--soft)}
+#tip .ex{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:11.5px}#tip .ex span:first-child{color:var(--soft)}#tip .ex span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+#tip .av{margin-top:8px;padding-top:7px;border-top:1px solid var(--line);display:grid;gap:4px;font-size:11.5px}#tip .av div{display:flex;gap:6px;align-items:baseline}#tip .av i{flex:none;width:9px;height:9px;border-radius:2px;transform:translateY(1px)}
+.note{font-size:9.5px;line-height:1.4;color:var(--soft)}
+.layers{position:absolute;right:20px;top:calc(18px + env(safe-area-inset-top,0px));display:flex;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+.layers button{border:0;background:transparent;color:var(--ink);font:500 12px var(--sans);padding:6px 11px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.layers button:hover{background:var(--line)}.layers button[aria-pressed=true]{background:var(--ink);color:var(--sea)}
+.layers button:focus-visible,#avBtn:focus-visible,#gifBtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layers .s{display:none}
+.accwin{display:flex;gap:3px}.accwin button{flex:1;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 10.5px var(--mono);padding:3px 0;border-radius:4px;cursor:pointer}.accwin button[aria-pressed=true]{background:var(--ink);color:var(--sea)}
+/* zoom buttons, also reachable by keyboard */
+.zoom{position:absolute;left:20px;top:50%;transform:translateY(-50%);display:grid;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.zoom button{width:34px;height:34px;border:0;background:transparent;color:var(--ink);font:500 18px var(--sans);cursor:pointer}.zoom button+button{border-top:1px solid var(--line)}.zoom button:hover{background:var(--line)}.zoom button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.stale{color:var(--accent)}
+.legend #src{display:none}
+@media (max-width:640px){
+  .head{left:12px}.legend{right:12px;left:auto;top:auto;bottom:calc(116px + env(safe-area-inset-bottom,0px));width:150px;padding:7px 9px}
+  .layers{left:12px;right:12px;top:calc(56px + env(safe-area-inset-top,0px));justify-content:space-between}.layers button{padding:6px 8px;flex:1}.layers .l{display:none}.layers .s{display:inline}
+  .legend .note{display:none}.legend #avN{display:block}h1{font-size:28px}.when{padding-right:132px}.when .hp{display:none}
+  #tip{left:12px!important;right:12px;width:auto;top:calc(110px + env(safe-area-inset-top,0px))!important}
+  .zoom{left:12px;top:auto;bottom:calc(128px + env(safe-area-inset-bottom,0px));transform:none}.zoom button{width:42px;height:42px}
+  .accwin button{padding:9px 0;font-size:10.5px;white-space:nowrap}.legend #src{display:block}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+[hidden]{display:none!important}
+</style>
+<canvas id="c" aria-label="Mapa de nubes y precipitación de España"></canvas>
+<canvas id="wc" aria-hidden="true" style="pointer-events:none"></canvas>
+<header class="head"><h1>Cielo de España</h1><div class="badge" id="badge" hidden>Datos de ejemplo</div></header>
+<nav class="layers" aria-label="Capa del mapa">
+  <button data-m="cielo" aria-pressed="true"><span class="l">Nubes y lluvia</span><span class="s">Cielo</span></button>
+  <button data-m="temp" aria-pressed="false"><span class="l">Temperatura</span><span class="s">Temp.</span></button>
+  <button data-m="acc" aria-pressed="false"><span class="l">Lluvia acumulada</span><span class="s">Acum.</span></button>
+  <button data-m="wind" aria-pressed="false">Viento</button>
+</nav>
+<aside class="legend">
+  <div id="lgCielo" style="display:grid;gap:5px">
+  <div class="t"><label><input type="checkbox" id="lRain" checked>Precipitación</label><span>mm/h</span></div>
+  <div class="ramp" id="rampR"></div><div class="ticks abs" id="ticksR"></div>
+  <div class="t"><label><input type="checkbox" id="lCloud" checked>Nubosidad</label><span>%</span></div>
+  <div class="ramp" id="rampC"></div><div class="ticks"><span>0</span><span>50</span><span>100</span></div>
+  </div>
+  <div id="lgOther" style="display:grid;gap:5px" hidden><div class="t"><span id="lgT"></span><span id="lgU"></span></div><div class="ramp" id="rampO"></div><div class="ticks abs" id="ticksO"></div><div class="accwin" id="accWin" hidden role="group" aria-label="Horas acumuladas"><button data-h="1">1 h</button><button data-h="3">3 h</button><button data-h="6" aria-pressed="true">6 h</button><button data-h="12">12 h</button><button data-h="24">24 h</button></div><div class="note" id="lgSub" style="display:block"></div></div>
+  <div id="avLeg" hidden><div class="t"><span>Avisos AEMET</span></div><div class="note" id="avN" style="margin:-2px 0 4px"></div><div class="avleg"><span><i style="background:rgba(242,197,0,.14);border:2px solid #f2c500"></i>Amarillo</span><span><i style="background:rgba(240,138,0,.18);border:2px solid #f08a00"></i>Naranja</span><span><i style="background:rgba(214,32,42,.22);border:2px solid #d6202a"></i>Rojo</span></div></div>
+  <div class="t"><label><input type="checkbox" id="lMun">Municipios</label><span id="munHint" class="note" style="font-weight:400"></span></div>
+  <div class="note" id="note"></div><div class="note" id="src"></div>
+  <div class="note hint">Rueda o pellizco para acercar, arrastra para moverte, doble clic para volver.</div>
+</aside>
+<div class="zoom" role="group" aria-label="Zoom"><button id="zIn" aria-label="Acercar">+</button><button id="zOut" aria-label="Alejar">−</button><button id="zHome" aria-label="Ver toda España">⌂</button></div>
+<div id="tip"></div>
+<div class="gifpanel" id="gifPanel" hidden>
+  <h2>Crear GIF</h2>
+  <div class="st" style="margin-top:-4px">Graba la zona que ves ahora: encuádrala antes con zoom y arrastre.</div>
+  <div class="row"><label for="gFrom">Desde</label><select id="gFrom"></select></div>
+  <div class="row"><label for="gTo">Hasta</label><select id="gTo"></select></div>
+  <div class="row"><label for="gDur">Duración</label><select id="gDur"><option value="5">5 segundos</option><option value="10" selected>10 segundos</option><option value="15">15 segundos</option></select></div>
+  <div class="row"><label for="gSize">Ancho</label><select id="gSize"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1000">1000 px</option></select></div>
+  <button class="go" id="gGo">Crear GIF</button>
+  <div class="st" id="gSt"></div>
+  <img id="gImg" alt="Vista previa del GIF" hidden>
+</div>
+<div class="dock">
+  <button id="play" aria-label="Reproducir">▶</button>
+  <div class="when" id="when">–</div>
+  <input type="range" id="t" min="0" max="47" step="1" value="0" aria-label="Hora">
+  <button id="avBtn" aria-pressed="false"><i></i>AVISOS</button>
+  <button id="gifBtn" aria-expanded="false" aria-controls="gifPanel">GIF</button>
+  <div class="days" id="days"></div>
+</div>
+<script type="application/json" id="geo">__GEO__</script>
+<script type="application/json" id="wx">__WX__</script>
+<script type="application/json" id="dem">__DEM__</script>
+<script type="application/json" id="av">__AV__</script>
+<script type="application/json" id="mun">__MUN__</script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const GEO=JSON.parse($('geo').textContent),WX=JSON.parse($('wx').textContent);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// ---- projection: equirectangular around Spain; Canarias scaled into an inset in the Atlantic, west of the Algarve
+const LAT0=40.2,KX=Math.cos(LAT0*Math.PI/180),CK=0.6,CX0=-12.4,CY0=35.95,CLON=-18.6,CLAT=27.3;
+const isCan=c=>c===35||c===38;
+const pj=(lon,lat,can)=>can?[((lon-CLON)*CK+CX0)*KX,(lat-CLAT)*CK+CY0]:[lon*KX,lat];
+const BB=[-12.45*KX,35.9,4.4*KX,43.85];
+// ---- weather grids
+const decode=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;};
+const GR=WX.grids.map(g=>({...g,can:g.id==='can',cloud:decode(g.cloud),rain:decode(g.rain),cv:document.createElement('canvas')}));
+// temperature/wind arrive in newer wx.json; wind is turned into u/v (towards which it blows) so it interpolates across north;
+// cum = running rain total in mm, so the total between two hours is a subtraction
+const HAS={temp:!!WX.grids[0].temp,wind:!!WX.grids[0].ws};
+GR.forEach((g,gi)=>{const s=WX.grids[gi],N=g.nx*g.ny*WX.T;
+  if(HAS.temp){const b=decode(s.temp);g.temp=new Float32Array(N);for(let i=0;i<N;i++)g.temp[i]=b[i]/3-40;}
+  if(HAS.wind){const w=decode(s.ws),d=decode(s.wd);g.u=new Float32Array(N);g.v=new Float32Array(N);g.ws=new Float32Array(N);
+    for(let i=0;i<N;i++){const a=d[i]/256*2*Math.PI;g.ws[i]=w[i];g.u[i]=-w[i]*Math.sin(a);g.v[i]=-w[i]*Math.cos(a);}}
+  const n=g.nx*g.ny;g.cum=new Float32Array(N);for(let k=0;k<n;k++){let c=0;for(let tt=0;tt<WX.T;tt++){c+=g.rain[tt*n+k]/10;g.cum[tt*n+k]=c;}}});
+GR.forEach(g=>{g.cv.width=g.nx;g.cv.height=g.ny;g.ctx=g.cv.getContext('2d');g.img=g.ctx.createImageData(g.nx,g.ny);});
+const RSTOPS=[[0.1,[160,210,240,0]],[0.3,[120,190,235,170]],[1,[60,140,220,215]],[2,[40,170,110,225]],[5,[235,200,40,235]],[10,[235,120,30,240]],[20,[200,30,60,245]]];
+const ramp=(S,v)=>{if(v<=S[0][0])return S[0][1];for(let i=1;i<S.length;i++){const [a,ca]=S[i-1],[b,cb]=S[i];if(v<=b){const f=(v-a)/(b-a);return ca.map((x,k)=>x+(cb[k]-x)*f);}}return S[S.length-1][1];};
+// fixed scale spanning Spain's yearly extremes (−10 °C to 45 °C), so a colour always means the same temperature
+const TSTOPS=[[-10,[120,60,170,195]],[-5,[94,79,162,190]],[0,[50,136,189,190]],[5,[102,194,165,185]],[10,[171,221,164,180]],[15,[230,245,152,175]],[20,[254,224,139,180]],[25,[253,174,97,190]],[30,[244,109,67,200]],[35,[213,62,79,210]],[40,[158,1,66,220]],[45,[90,0,40,230]]];
+// same colours as the hourly precipitation, stretched to accumulated millimetres
+const ASTOPS=[[0.2,[160,210,240,0]],[1,[120,190,235,170]],[3,[60,140,220,215]],[6,[40,170,110,225]],[12,[235,200,40,235]],[25,[235,120,30,240]],[50,[200,30,60,245]]];
+// same colours as the particle classes (PCOL), so the background and the particles tell the same story
+const WSTOPS=[[5,[42,143,181,0]],[15,[42,143,181,110]],[25,[31,158,138,150]],[35,[63,158,63,175]],[50,[212,165,0,195]],[70,[224,112,28,215]],[90,[200,32,60,230]]];
+// lluvia acumulada over a short window that ends at the shown hour
+let mode='cielo',accWin=6;const accStart=()=>Math.max(0,t-accWin);
+// continuous fields, with the provincial mean written on each province
+const PROV_MODES={temp:'temp',acc:'acc'};
+// number shown on the map for a temperature (°) or accumulated-rain (mm) value
+function fmtVal(v){return mode==='temp'?Math.round(v)+'°':(v<0.2?'0':v<10?v.toFixed(1).replace('.',','):String(Math.round(v)));}
+function provMean(p,f){let s=0,n=0;for(const [x,y] of p.samp){const v=valueAt(x,y,t);if(v&&v[f]!=null){s+=v[f];n++;}}return n?s/n:null;}
+function rainCol(mm){if(mm<RSTOPS[0][0])return null;for(let i=1;i<RSTOPS.length;i++){const [a,ca]=RSTOPS[i-1],[b,cb]=RSTOPS[i];if(mm<=b){const f=(mm-a)/(b-a);return ca.map((v,k)=>v+(cb[k]-v)*f);}}return RSTOPS[RSTOPS.length-1][1];}
+$('rampR').style.background=`linear-gradient(90deg,${RSTOPS.map(([,c],i)=>`rgba(${c[0]},${c[1]},${c[2]},${Math.max(.35,c[3]/255)}) ${i/(RSTOPS.length-1)*100}%`).join(',')})`;
+$('rampC').style.background=`linear-gradient(90deg,rgba(${css('--cloud')},0),rgba(${css('--cloud')},.55) 50%,rgba(${css('--cloudShade')},.85))`;$('rampC').style.boxShadow='inset 0 0 0 1px '+css('--line');
+// tick labels sit exactly where their colour stop is drawn (stops are evenly spaced in the ramp; colours interpolate linearly between them, as on the map)
+function setTicks(el,items){el.innerHTML=items.map(([l,f])=>`<span style="left:${(f*100).toFixed(2)}%">${l}</span>`).join('');}
+const dec=v=>String(v).replace('.',',');
+setTicks($('ticksR'),RSTOPS.map(([v],i)=>[i===RSTOPS.length-1?'≥'+dec(v):dec(v),i/(RSTOPS.length-1)]));
+// sample a field at fractional time (linear between hours)
+function at(g,f,t,i,j){const n=g.nx*g.ny,t0=Math.floor(t),t1=Math.min(WX.T-1,t0+1),w=t-t0,k=j*g.nx+i;return f[t0*n+k]*(1-w)+f[t1*n+k]*w;}
+function valueAt(lon,lat,t){for(const g of GR){const fi=(lon-g.lon0)/g.d,fj=(lat-g.lat0)/g.d;if(fi<0||fj<0||fi>g.nx-1||fj>g.ny-1)continue;
+  const i=Math.floor(fi),j=Math.floor(fj),i1=Math.min(i+1,g.nx-1),j1=Math.min(j+1,g.ny-1),a=fi-i,b=fj-j;
+  const bil=f=>at(g,f,t,i,j)*(1-a)*(1-b)+at(g,f,t,i1,j)*a*(1-b)+at(g,f,t,i,j1)*(1-a)*b+at(g,f,t,i1,j1)*a*b;
+  const r={cloud:bil(g.cloud),rain:bil(g.rain)/10,acc:Math.max(0,bil(g.cum)-accAt(g,accStart(),i,j,i1,j1,a,b))};
+  if(g.temp)r.temp=bil(g.temp);if(g.u){r.u=bil(g.u);r.v=bil(g.v);r.ws=bil(g.ws);}return r;}return null;}
+// running total at the start hour (bilinear in space, linear in time)
+function accAt(g,tt,i,j,i1,j1,a,b){const f=(ii,jj)=>at(g,g.cum,tt,ii,jj);return f(i,j)*(1-a)*(1-b)+f(i1,j)*a*(1-b)+f(i,j1)*(1-a)*b+f(i1,j1)*a*b;}
+// ---- geometry paths in projected coords
+const provPaths=[];for(const c in GEO.prov){const can=isCan(+c);const p=new Path2D();for(const r of GEO.prov[c]){r.forEach(([x,y],i)=>{const [X,Y]=pj(x,y,can);i?p.lineTo(X,-Y):p.moveTo(X,-Y);});p.closePath();}provPaths.push({c:+c,p,can,rings:GEO.prov[c]});}
+// provincial means: each province gets up to ~60 sample points on a lattice inside it; the label sits on the sample nearest their centre
+function inRings(rings,x,y){let ins=false;for(const r of rings)for(let i=0,j=r.length-1;i<r.length;j=i++){const [xi,yi]=r[i],[xj,yj]=r[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)ins=!ins;}return ins;}
+for(const p of provPaths){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const r of p.rings)for(const [x,y] of r){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  let pts=[];for(let y=y0+.02;y<y1;y+=.04)for(let x=x0+.02;x<x1;x+=.04)if(inRings(p.rings,x,y))pts.push([x,y]);
+  if(!pts.length){const r=p.rings[0];pts=[[r.reduce((a,q)=>a+q[0],0)/r.length,r.reduce((a,q)=>a+q[1],0)/r.length]];}
+  const cx=pts.reduce((a,q)=>a+q[0],0)/pts.length,cy=pts.reduce((a,q)=>a+q[1],0)/pts.length;p.lab=pts.reduce((b,q)=>Math.hypot(q[0]-cx,q[1]-cy)<Math.hypot(b[0]-cx,b[1]-cy)?q:b,pts[0]);
+  const k=Math.max(1,Math.ceil(pts.length/60));p.samp=pts.filter((q,i)=>i%k===0);}
+const gapPath=new Path2D();for(const r of GEO.gaps){r.forEach(([x,y],i)=>{const [X,Y]=pj(x,y,false);i?gapPath.lineTo(X,-Y):gapPath.moveTo(X,-Y);});gapPath.closePath();}
+const borderPath=new Path2D();for(const l of GEO.provLines){const can=false;l.forEach(([x,y],i)=>{if(i===0){borderPath.moveTo(...flip(pj(x,y,isCanPt(x,y))));}else borderPath.lineTo(...flip(pj(x,y,isCanPt(x,y))));});}
+function flip([x,y]){return [x,-y];}
+// ---- AEMET warnings: zone polygons + timed warnings; a zone is painted with its highest level in force at the shown hour
+const AV=JSON.parse($('av').textContent||'null')||{zones:{},warnings:[]};
+const AVCOL={1:[242,197,0],2:[240,138,0],3:[214,32,42]},AVNAME={1:'amarillo',2:'naranja',3:'rojo'};
+const AVZ={};for(const k in AV.zones){const z=AV.zones[k],can=z.p.some(r=>r.some(([x])=>x<-13)),p=new Path2D();
+  for(const r of z.p){r.forEach(([x,y],i)=>{const [X,Y]=pj(x,y,can);i?p.lineTo(X,-Y):p.moveTo(X,-Y);});p.closePath();}AVZ[k]={...z,can,path:p};}
+AV.warnings.forEach(w=>{w.a=Date.parse(w.on);w.b=Date.parse(w.off);});
+let showAv=false;
+// ---- municipal layer: borders between the 8,132 municipalities (from the INE census sections) and their names once zoomed in
+const MUN=JSON.parse($('mun').textContent||'null');let showMun=false,munPath=null;
+// municipality under a point, from the run-length lookup raster in MUN.r (built from the INE census sections)
+let munGrid=null;function munAt(lon,lat){const R=MUN&&MUN.r;if(!R)return null;
+  if(!munGrid){const u=Uint8Array.from(atob(R.runs),c=>c.charCodeAt(0));let p=0;const vu=()=>{let r=0,s=1,b;do{b=u[p++];r+=(b&127)*s;s*=128;}while(b&128);return r;};
+    munGrid=new Uint16Array(R.w*R.h);let i=0;while(p<u.length){const n=vu(),v=vu();if(v)munGrid.fill(v,i,i+n);i+=n;}}
+  const c=Math.floor((lon-R.x0)/R.d),r=Math.floor((lat-R.y0)/R.d);if(c<0||r<0||c>=R.w||r>=R.h)return null;const v=munGrid[r*R.w+c];return v?MUN.labs[v-1][0]:null;}
+if(!MUN)$('lMun').closest('.t').hidden=true;
+function buildMun(){munPath=new Path2D();const b=atob(MUN.lines),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
+  let p=0;const vu=()=>{let r=0,m=1,c;do{c=u[p++];r+=(c&127)*m;m*=128;}while(c&128);return r;},vs=()=>{const n=vu();return n%2?-(n+1)/2:n/2;};
+  while(p<u.length){const n=vu();let x=0,y=0;for(let k=0;k<n;k++){x+=vs();y+=vs();const lon=x*MUN.q,lat=y*MUN.q,[X,Y]=pj(lon,lat,isCanPt(lon,lat));k?munPath.lineTo(X,-Y):munPath.moveTo(X,-Y);}}}
+const hourMs=()=>new Date(WX.start).getTime()+Math.round(t)*WX.step*1000;
+function avNow(){const ms=hourMs(),lv={};for(const w of AV.warnings)if(w.a<=ms&&ms<w.b)for(const z of w.z)lv[z]=Math.max(lv[z]||0,w.lv);return lv;}
+function avAt(lon,lat,can){const ms=hourMs(),out=[];for(const w of AV.warnings){if(!(w.a<=ms&&ms<w.b))continue;
+  for(const z of w.z){const Z=AVZ[z];if(!Z||Z.can!==can)continue;let ins=false;for(const r of Z.p)for(let i=0,j=r.length-1;i<r.length;j=i++){const [xi,yi]=r[i],[xj,yj]=r[j];if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)ins=!ins;}
+    if(ins){out.push({...w,zn:Z.n});break;}}}return out.sort((a,b)=>b.lv-a.lv);}
+function isCanPt(x,y){return x<-13&&y<30;}
+// ---- relief: hypsometric tint x hillshade from the elevation grids, upsampled and clipped to land
+const DEM=JSON.parse($('dem').textContent);
+const HYPSO=[[0,[176,201,146]],[150,[196,212,156]],[400,[222,218,166]],[700,[226,206,150]],[1000,[212,182,130]],[1400,[190,156,114]],[1900,[170,140,112]],[2500,[196,186,176]],[3200,[244,242,238]]];
+function hyp(e){if(e<=0)return HYPSO[0][1];for(let i=1;i<HYPSO.length;i++){const [a,ca]=HYPSO[i-1],[b,cb]=HYPSO[i];if(e<=b){const f=(e-a)/(b-a);return ca.map((v,k)=>v+(cb[k]-v)*f);}}return HYPSO[HYPSO.length-1][1];}
+const RELIEF=Object.entries(DEM).map(([id,g])=>{const b=atob(g.el),u8=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u8[i]=b.charCodeAt(i);
+  const el=new Uint16Array(u8.buffer),U=3,nx=(g.nx-1)*U+1,ny=(g.ny-1)*U+1,E=new Float32Array(nx*ny);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const fi=i/U,fj=j/U,i0=Math.min(g.nx-2,Math.floor(fi)),j0=Math.min(g.ny-2,Math.floor(fj)),a=fi-i0,c=fj-j0,k=j0*g.nx+i0;
+    E[j*nx+i]=el[k]*(1-a)*(1-c)+el[k+1]*a*(1-c)+el[k+g.nx]*(1-a)*c+el[k+g.nx+1]*a*c;}
+  const mk=()=>{const c=document.createElement('canvas');c.width=nx;c.height=ny;return c;};return {...g,can:id==='can',U,nx2:nx,ny2:ny,E,cv:mk(),cvN:id==='can'?null:mk()};});
+function paintRelief(){const dark=matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light'||document.documentElement.dataset.theme==='dark';
+  // light from the NW, 40° high; vertical exaggeration so the meseta's ranges read at country scale
+  const az=315*Math.PI/180,alt=40*Math.PI/180,lx=Math.cos(alt)*Math.sin(az),ly=Math.cos(alt)*Math.cos(az),lz=Math.sin(alt),VE=6;
+  for(const r of RELIEF){const {nx2:nx,ny2:ny,E}=r,ctx2=r.cv.getContext('2d'),img=ctx2.createImageData(nx,ny),d=img.data,imgN=r.cvN&&r.cvN.getContext('2d').createImageData(nx,ny),dN=imgN&&imgN.data;
+    const dy=r.d/r.U*111320;
+    for(let j=0;j<ny;j++){const lat=r.lat0+j*r.d/r.U,dx=dy*Math.cos(lat*Math.PI/180);
+      for(let i=0;i<nx;i++){const k=j*nx+i,e=E[k];
+        const ex=(E[j*nx+Math.min(nx-1,i+1)]-E[j*nx+Math.max(0,i-1)])/(2*dx)*VE,ey=(E[Math.min(ny-1,j+1)*nx+i]-E[Math.max(0,j-1)*nx+i])/(2*dy)*VE;
+        const nl=Math.hypot(ex,ey,1),sh=Math.max(0,(-ex*lx-ey*ly+lz)/nl),f=Math.max(.45,Math.min(1.25,1+0.9*(sh-lz)));
+        const c=hyp(e),m=dark?0.42:1,o=4*((ny-1-j)*nx+i);
+        d[o]=Math.min(255,c[0]*f*m);d[o+1]=Math.min(255,c[1]*f*m);d[o+2]=Math.min(255,c[2]*f*m);d[o+3]=255;
+        // neighbours (Portugal, France, Morocco): same relief, desaturated, faded out where the DEM says sea
+        if(dN){const L=.3*c[0]+.59*c[1]+.11*c[2],nm=dark?0.36:1.04;for(let q=0;q<3;q++)dN[o+q]=Math.min(255,(L*.8+c[q]*.2)*f*nm);const ed=Math.min(i,j,nx-1-i,ny-1-j)/(6*r.U);dN[o+3]=255*Math.max(0,Math.min(1,(e-0.5)/4))*Math.min(1,ed);}}}
+    ctx2.putImageData(img,0,0);if(imgN)r.cvN.getContext('2d').putImageData(imgN,0,0);}}
+paintRelief();
+const CITIES=[['Madrid',-3.7038,40.4168,1],['Barcelona',2.1686,41.3874,-1],['Valencia',-0.3763,39.4699,1],['Sevilla',-5.9845,37.3891,-1],['Zaragoza',-0.8891,41.6488,1],
+  ['Málaga',-4.4214,36.7213,1],['Murcia',-1.1307,37.9922,-1],['Palma',2.6502,39.5696,1],['Las Palmas',-15.4363,28.1235,1],['Alicante',-0.4810,38.3452,1]];
+// ---- view
+const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
+function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
+  const mob=W<=640,top=mob?64:52,bot=mob?170:100;const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
+  S0=S;OX=(W-(BB[2]-BB[0])*S)/2-BB[0]*S+(mob?0:Math.min(40,(W-16-(BB[2]-BB[0])*S)/2));OY=top+((H-top-bot)-(BB[3]-BB[1])*S)/2+BB[3]*S;draw();}
+const toScreen=(X,Y)=>[OX+X*S,OY+Y*S];
+function fromScreen(px,py){const X=(px-OX)/S,Y=-(py-OY)/S;
+  // Canarias inset: undo the shift when the point falls inside the inset box
+  const cx=(X/KX-CX0)/CK+CLON,cy=(Y-CY0)/CK+CLAT;if(cx>-18.6&&cx<-13.2&&cy>27.3&&cy<29.6)return {lon:cx,lat:cy,can:true};return {lon:X/KX,lat:Y,can:false};}
+let t=0;
+function paintField(g){const d=g.img.data,n=g.nx*g.ny;const showC=$('lCloud').checked,showR=$('lRain').checked;const cc=css('--cloud').split(',').map(Number),cs=css('--cloudShade').split(',').map(Number);
+  for(let j=0;j<g.ny;j++)for(let i=0;i<g.nx;i++){const row=g.ny-1-j,o=4*(row*g.nx+i);let r=0,gg=0,b=0,a=0;
+    if(mode!=='cielo'){let col=null;
+      if(mode==='temp'&&g.temp)col=ramp(TSTOPS,at(g,g.temp,t,i,j));
+      else if(mode==='acc'){const v=at(g,g.cum,t,i,j)-at(g,g.cum,accStart(),i,j);col=v>=ASTOPS[0][0]?ramp(ASTOPS,v):null;}
+      else if(mode==='wind'&&g.ws){col=ramp(WSTOPS,at(g,g.ws,t,i,j)).slice();col[3]*=.5;}
+      const e=Math.min(1,Math.min(i,j,g.nx-1-i,g.ny-1-j)/(g.can?2:5));if(col){d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=col[3]*e;}else d[o+3]=0;continue;}
+    const c=showC?at(g,g.cloud,t,i,j)/100:0,mm=showR?at(g,g.rain,t,i,j)/10:0;
+    if(c>0.1){const k=Math.min(1,(c-0.1)/0.9),sh=Math.pow(Math.max(0,c-0.7)/0.3,1.5);r=cc[0]+(cs[0]-cc[0])*sh;gg=cc[1]+(cs[1]-cc[1])*sh;b=cc[2]+(cs[2]-cc[2])*sh;a=Math.pow(k,1.4)*190;}
+    const rc=rainCol(mm);if(rc){const ra=rc[3]/255,ca=a/255;const oa=ra+ca*(1-ra);r=(rc[0]*ra+r*ca*(1-ra))/oa;gg=(rc[1]*ra+gg*ca*(1-ra))/oa;b=(rc[2]*ra+b*ca*(1-ra))/oa;a=oa*255;}
+    const e=Math.min(1,Math.min(i,j,g.nx-1-i,g.ny-1-j)/(g.can?2:5));a*=e;d[o]=r;d[o+1]=gg;d[o+2]=b;d[o+3]=a;}
+  g.ctx.putImageData(g.img,0,0);}
+function draw(){ctx.setTransform(DPR,0,0,DPR,0,0);
+  {const sg=ctx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,Math.hypot(W,H)*.6);sg.addColorStop(0,css('--sea'));sg.addColorStop(1,css('--sea2'));ctx.fillStyle=sg;ctx.fillRect(0,0,W,H);}
+  ctx.save();ctx.translate(OX,OY);ctx.scale(S,S);
+  // Canarias inset frame
+  const [a1,b1]=pj(-18.6,27.3,true),[a2,b2]=pj(-13.2,29.6,true);
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  for(const r of RELIEF){if(!r.cvN)continue;const h=r.d/r.U/2,[x0,y0]=pj(r.lon0-h,r.lat0+(r.ny-1)*r.d+h,false),[x1,y1]=pj(r.lon0+(r.nx-1)*r.d+h,r.lat0-h,false);ctx.filter=`blur(${Math.max(.5,S*r.d/r.U*.6)}px)`;ctx.drawImage(r.cvN,x0,-y0,x1-x0,y0-y1);ctx.filter='none';}
+  ctx.fillStyle=css('--sea');ctx.globalAlpha=.94;ctx.fillRect(a1,-b2,a2-a1,b2-b1);ctx.globalAlpha=1;ctx.strokeStyle=css('--line');ctx.lineWidth=1/S;ctx.strokeRect(a1,-b2,a2-a1,b2-b1);
+  // Spain: soft drop shadow, then the coloured relief clipped to its provinces
+  ctx.save();ctx.shadowColor=css('--shadow');ctx.shadowBlur=12;ctx.shadowOffsetY=3;ctx.fillStyle=css('--land');for(const p of provPaths)ctx.fill(p.p,'evenodd');ctx.fill(gapPath);ctx.restore();
+  ctx.save();const landClip=new Path2D();for(const p of provPaths)landClip.addPath(p.p);landClip.addPath(gapPath);ctx.clip(landClip,'nonzero');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  for(const r of RELIEF){const h=r.d/r.U/2,[x0,y0]=pj(r.lon0-h,r.lat0+(r.ny-1)*r.d+h,r.can),[x1,y1]=pj(r.lon0+(r.nx-1)*r.d+h,r.lat0-h,r.can);ctx.drawImage(r.cv,x0,-y0,x1-x0,y0-y1);}
+  ctx.restore();
+  ctx.strokeStyle=css('--border');ctx.lineWidth=0.6/S;ctx.stroke(borderPath);
+  ctx.strokeStyle=css('--coast');ctx.lineWidth=0.9/S;for(const p of provPaths)ctx.stroke(p.p);
+  // weather on top, smoothed upscaling
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  const prov=PROV_MODES[mode];let pv=null;
+  if(prov){pv=new Map();for(const p of provPaths)pv.set(p,provMean(p,prov));}
+  for(const g of GR){paintField(g);const [x0,y0]=pj(g.lon0-g.d/2,g.lat0+(g.ny-.5)*g.d,g.can),[x1,y1]=pj(g.lon0+(g.nx-.5)*g.d,g.lat0-g.d/2,g.can);ctx.filter=`blur(${Math.max(1,S*g.d*0.55*(g.can?CK:1))}px)`;ctx.drawImage(g.cv,x0,-y0,x1-x0,y0-y1);ctx.filter='none';}
+  // borders faintly over the weather for orientation
+  ctx.globalAlpha=.4;ctx.strokeStyle=css('--coast');ctx.lineWidth=0.7/S;for(const p of provPaths)ctx.stroke(p.p);ctx.globalAlpha=1;
+  if(showMun&&MUN){if(!munPath)buildMun();const z=S/S0;ctx.globalAlpha=Math.min(.42,.22+.03*z);ctx.strokeStyle=css('--ink');ctx.lineWidth=(z<2?.45:.6)/S;ctx.stroke(munPath);ctx.globalAlpha=1;}
+  if(showAv){const lv=avNow(),cnt=[0,0,0,0];for(const L of [1,2,3]){const [r,g,b]=AVCOL[L];ctx.fillStyle=`rgba(${r},${g},${b},${.1+L*.04})`;ctx.strokeStyle=`rgb(${r},${g},${b})`;ctx.lineWidth=2.4/S;ctx.lineJoin='round';
+      for(const z in lv)if(lv[z]===L&&AVZ[z]){ctx.fill(AVZ[z].path,'evenodd');ctx.stroke(AVZ[z].path);cnt[L]++;}}
+    $('avN').textContent=cnt[1]+cnt[2]+cnt[3]?[3,2,1].filter(L=>cnt[L]).map(L=>cnt[L]+' '+AVNAME[L]).join(' · '):'ninguno a esta hora';}
+  ctx.restore();
+  // live view animates particles on their own canvas; the static streamlines are for GIF frames and reduced motion
+  if(mode==='wind'&&HAS.wind&&(gifRec||reduce))drawArrows();
+  // ten most populous municipalities (INE padrón), labelled in screen space so text stays crisp at any zoom
+  // screen boxes already taken by the title, layer buttons, zoom buttons and legend, so no label hides under them
+  const boxes=['.head h1','.layers','.legend','.zoom'].map(q=>document.querySelector(q)).filter(Boolean).map(el=>{const r=el.getBoundingClientRect();return [r.left-4,r.top-4,r.right+4,r.bottom+4];});
+  const munVals=pv&&MUN&&S/S0>=2.5;
+  if(pv&&!munVals){const fz=W<=640?9.5:Math.min(13,10+S/S0*1.2);ctx.font=`600 ${fz}px `+css('--mono');ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+    for(const [p,v] of pv){if(v==null)continue;const [X,Y]=pj(p.lab[0],p.lab[1],p.can),[sx,sy]=toScreen(X,-Y);
+      const txt=fmtVal(v);
+      const tw=ctx.measureText(txt).width;boxes.push([sx-tw/2-2,sy-fz*.6,sx+tw/2+2,sy+fz*.6]);
+      ctx.lineWidth=3;ctx.strokeStyle=css('--halo');ctx.strokeText(txt,sx,sy);ctx.fillStyle=mode==='acc'&&v<0.2?css('--soft'):css('--ink');ctx.fillText(txt,sx,sy);}
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+  const fs=W<=640?10.5:12.5;ctx.font=`600 ${fs}px `+css('--sans');ctx.lineJoin='round';
+  // largest first; a label that would collide with one already placed is dropped, and it flips side at the screen edge
+  for(let [n,lon,lat,side] of (pv?[]:CITIES)){const can=lon<-13,[X,Y]=pj(lon,lat,can),[sx,sy]=toScreen(X,-Y);
+    const w=ctx.measureText(n).width;if(side>0&&sx+7+w>W-4)side=-1;if(side<0&&sx-7-w<4)side=1;
+    const bx=side>0?sx-4:sx-11-w,box=[bx,sy-fs*.7,bx+w+15,sy+fs*.7];if(boxes.some(b=>box[0]<b[2]&&box[2]>b[0]&&box[1]<b[3]&&box[3]>b[1]))continue;boxes.push(box);
+    ctx.beginPath();ctx.arc(sx,sy,3.2,0,7);ctx.fillStyle=css('--ink');ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=css('--halo');ctx.stroke();
+    ctx.textAlign=side<0?'right':'left';ctx.textBaseline='middle';const tx=sx+side*7;
+    ctx.lineWidth=3.5;ctx.strokeStyle=css('--halo');ctx.strokeText(n,tx,sy);ctx.fillStyle=css('--ink');ctx.fillText(n,tx,sy);}
+  // municipal names from zoom ×2.5, biggest towns first, skipping any that would overlap
+  if(MUN&&S/S0>=2.5){const mf=W<=640?10:11,vf=W<=640?11:13,nfont=`500 ${mf}px `+css('--sans'),vfont=`600 ${vf}px `+css('--mono');ctx.font=nfont;ctx.lineJoin='round';ctx.textAlign='center';ctx.textBaseline='middle';const soft=css('--soft'),halo=css('--halo');let placed=0;
+    // labs are ordered by size (the 300 biggest stay even with the Municipios layer off): only the biggest towns at first zoom, more as you zoom in, with generous spacing and a cap per screen
+    const z=S/S0,maxRank=Math.min(showMun?MUN.labs.length:300,Math.round(40*Math.pow(z/2.5,2.9))),cap=(W<=640?25:70)*Math.max(1,z/6),px=10,py=5;
+    for(let r=0;r<maxRank;r++){const [n,lon,lat]=MUN.labs[r];const [X,Y]=pj(lon,lat,isCanPt(lon,lat)),[sx,sy]=toScreen(X,-Y);if(sx<-50||sy<0||sx>W+50||sy>H)continue;
+      let vt=null;if(munVals){const v=valueAt(lon,lat,t);const f=v&&v[PROV_MODES[mode]];if(f!=null)vt=fmtVal(f);}
+      const w=ctx.measureText(n).width,top=vt?sy-mf*.75-vf-2:sy-mf*.75,box=[sx-w/2-px,top-py,sx+w/2+px,sy+mf*.75+py];if(boxes.some(b=>box[0]<b[2]&&box[2]>b[0]&&box[1]<b[3]&&box[3]>b[1]))continue;boxes.push(box);
+      ctx.lineWidth=3;ctx.strokeStyle=halo;ctx.strokeText(n,sx,sy);ctx.fillStyle=soft;ctx.fillText(n,sx,sy);
+      if(vt){ctx.font=vfont;const vy=sy-mf*.5-vf*.55-1;ctx.strokeText(vt,sx,vy);ctx.fillStyle=mode==='acc'&&vt==='0'?soft:css('--ink');ctx.fillText(vt,sx,vy);ctx.font=nfont;}
+      if(++placed>=cap)break;}}
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillStyle=css('--soft');ctx.font='11px '+css('--sans');const [lx,ly]=toScreen(a1,-b2);ctx.fillText('Canarias',lx+4,ly+14);
+  updWhen();}
+// ---- wind particles: each one drifts with the wind (faster when stronger) and leaves a fading trail; respawns when old or off the data
+const wc=$('wc'),wctx=wc.getContext('2d');let parts=[],gifRec=false,wView='',wRaf=0;
+function windAt(lon,lat){for(const g of GR){if(!g.u)return null;const fi=(lon-g.lon0)/g.d,fj=(lat-g.lat0)/g.d;if(fi<0||fj<0||fi>g.nx-1||fj>g.ny-1)continue;
+  const i=Math.floor(fi),j=Math.floor(fj),i1=Math.min(i+1,g.nx-1),j1=Math.min(j+1,g.ny-1),a=fi-i,b=fj-j;
+  const bil=f=>at(g,f,t,i,j)*(1-a)*(1-b)+at(g,f,t,i1,j)*a*(1-b)+at(g,f,t,i,j1)*(1-a)*b+at(g,f,t,i1,j1)*a*b;return {u:bil(g.u),v:bil(g.v)};}return null;}
+function spawn(p){for(let k=0;k<6;k++){p.x=Math.random()*W;p.y=Math.random()*H;const g=fromScreen(p.x,p.y);p.can=g.can;if(windAt(g.lon,g.lat))break;}p.age=Math.random()*60|0;p.max=60+Math.random()*60|0;}
+let wLast=0;
+function windTick(now){wRaf=0;const fr=wLast&&now?Math.min(3,(now-wLast)/16.67):1;wLast=now||0;if(mode!=='wind'||!HAS.wind||reduce||gifRec){wctx.setTransform(1,0,0,1,0,0);wctx.clearRect(0,0,wc.width,wc.height);parts=[];return;}
+  if(wc.width!==cv.width||wc.height!==cv.height){wc.width=cv.width;wc.height=cv.height;}
+  wctx.setTransform(DPR,0,0,DPR,0,0);const view=OX+','+OY+','+S+','+W+','+H;
+  const N=Math.round(Math.min(2200,W*H/650));if(view!==wView||parts.length!==N){wView=view;wctx.clearRect(0,0,W,H);parts=Array.from({length:N},()=>{const p={};spawn(p);return p;});}
+  // fade the previous trails
+  wctx.globalCompositeOperation='destination-out';wctx.fillStyle=`rgba(0,0,0,${(1-Math.pow(.925,fr)).toFixed(4)})`;wctx.fillRect(0,0,W,H);wctx.globalCompositeOperation='source-over';
+  // particles coloured by speed (same breaks as the legend), batched into one path per colour
+  const bins=PCOL.map(()=>new Path2D());wctx.lineWidth=1.4;wctx.lineCap='round';
+  const k=(W<=640?.045:.055)*Math.max(1,Math.sqrt(S/S0))*fr;
+  for(const p of parts){const g=fromScreen(p.x,p.y),w=g.can===p.can&&windAt(g.lon,g.lat);
+    if(!w||(p.age+=fr)>p.max){spawn(p);continue;}
+    const nx=p.x+w.u*k,ny=p.y-w.v*k,sp=Math.hypot(w.u,w.v);let b=0;while(b<PCOL.length-1&&sp>=PCOL[b+1][0])b++;
+    bins[b].moveTo(p.x,p.y);bins[b].lineTo(nx,ny);p.x=nx;p.y=ny;if(nx<0||ny<0||nx>W||ny>H)spawn(p);}
+  // light wind: slate grey on the light map, pale grey on the dark one (white/light grey vanish on light land)
+  PCOL[0][1]=css('--ink')==='#e8ecec'?'#d5dade':'#6f7d88';
+  bins.forEach((pa,i)=>{wctx.strokeStyle=PCOL[i][1];wctx.globalAlpha=.95;wctx.stroke(pa);});wctx.globalAlpha=1;wRaf=requestAnimationFrame(windTick);}
+// light wind (< 15 km/h) in slate grey (theme-dependent, see windTick), so calm reads as faint rather than as a strong dark stroke
+const PCOL=[[0,'#6f7d88'],[15,'#2a8fb5'],[25,'#1f9e8a'],[35,'#3f9e3f'],[50,'#d4a500'],[70,'#e0701c'],[90,'#c8203c']];
+function windKick(){if(!wRaf)wRaf=requestAnimationFrame(windTick);}
+// wind as streamlines: from a jittered lattice of seeds each line follows the flow for a while (longer when stronger), ending in a small head
+function drawArrows(){const sp=W<=640?42:58,ink=css('--ink'),halo=css('--halo');ctx.lineCap='round';ctx.lineJoin='round';
+  const hash=(a,b)=>{const x=Math.sin(a*127.1+b*311.7)*43758.5453;return x-Math.floor(x);};
+  const gx0=Math.floor(-OX/sp)-1,gy0=Math.floor(-OY/sp)-1;
+  for(let gy=gy0;gy*sp+OY<H+sp;gy++)for(let gx=gx0;gx*sp+OX<W+sp;gx++){
+    let x=OX+(gx+hash(gx,gy))*sp,y=OY+(gy+hash(gy,gx+7))*sp;if(x<0||y<0||x>W||y>H)continue;
+    const g0=fromScreen(x,y),v0=valueAt(g0.lon,g0.lat,t);if(!v0||v0.ws==null||v0.ws<2)continue;
+    if(g0.can&&!(g0.lon>-18.4&&g0.lon<-13.3&&g0.lat>27.5&&g0.lat<29.5))continue;
+    const pts=[[x,y]],steps=20,stepLen=Math.max(2.6,Math.min(6,v0.ws*.1))*(W<=640?.8:1);
+    for(let k=0;k<steps;k++){const g=fromScreen(x,y);if(g.can!==g0.can)break;const v=valueAt(g.lon,g.lat,t);if(!v||v.ws==null)break;const m=Math.hypot(v.u,v.v);if(m<.5)break;
+      x+=v.u/m*stepLen;y-=v.v/m*stepLen;pts.push([x,y]);}
+    if(pts.length<3)continue;
+    const line=()=>{ctx.beginPath();pts.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));};
+    const [ax,ay]=pts[pts.length-2],[bx,by]=pts[pts.length-1],m=Math.hypot(bx-ax,by-ay)||1,dx=(bx-ax)/m,dy=(by-ay)/m,h=4.5;
+    const head=()=>{ctx.beginPath();ctx.moveTo(bx-dx*h-dy*h*.55,by-dy*h+dx*h*.55);ctx.lineTo(bx,by);ctx.lineTo(bx-dx*h+dy*h*.55,by-dy*h-dx*h*.55);};
+    ctx.strokeStyle=halo;ctx.lineWidth=3.2;ctx.globalAlpha=.55;line();ctx.stroke();head();ctx.stroke();
+    ctx.strokeStyle=ink;ctx.lineWidth=1.3;ctx.globalAlpha=.85;line();ctx.stroke();head();ctx.stroke();ctx.globalAlpha=1;}}
+// ---- time
+const t0=new Date(WX.start).getTime();$('t').max=WX.T-1;
+// index of the current hour: everything before it is the past week, after it the forecast
+const NOW=Math.max(0,Math.min(WX.T-1,WX.updated?Math.floor((new Date(WX.updated).getTime()-t0)/3600e3):0));
+const fmtDay=new Intl.DateTimeFormat('es-ES',{weekday:'short',day:'numeric',month:'short',timeZone:'Europe/Madrid'});
+const fmtH=new Intl.DateTimeFormat('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});
+const fmtFull=new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});
+// "ahora" is the real clock, not the time the data was generated; old data says how old it is
+const nowK=()=>Math.floor((Date.now()-t0)/(WX.step*1000)),ageH=()=>WX.updated?Math.floor((Date.now()-new Date(WX.updated).getTime())/3600e3):0;
+function updWhen(){const k=Math.round(t),d=new Date(t0+k*WX.step*1000),nk=nowK(),age=ageH();
+  $('when').innerHTML=fmtFull.format(d)+'<span class="hp"> (hora peninsular)</span> · '+(k>nk?'previsión':k===nk?'ahora':'modelo, hora pasada')+(age>=9?` <span class="stale">· datos de hace ${age<48?age+' h':Math.round(age/24)+' días'}</span>`:'');
+  if(mode==='acc')accText();}
+// the slider runs from now to the end of the forecast; the past week stays available to the GIF export
+$('t').min=NOW;
+{const days=$('days'),span=Math.max(1,WX.T-1-NOW);let html='';let prev='';for(let k=NOW;k<WX.T;k++){const d=new Date(t0+k*WX.step*1000);const day=fmtDay.format(d);const pos=(k-NOW)/span*100;
+  if(day!==prev){if(k<6&&k>0){}html+=`<span class="d" style="left:${pos}%" data-k="${k}">${day}</span>`;prev=day;}}days.innerHTML=html;
+  const fitDays=()=>{const sp=[...days.children];sp.forEach((s,i)=>{const nx=sp[i+1];const room=((nx?+nx.dataset.k:WX.T-1)-(+s.dataset.k))/span*days.clientWidth;s.style.visibility=room<s.scrollWidth+6?'hidden':'visible';});};addEventListener('resize',fitDays);requestAnimationFrame(fitDays);$('t').max=WX.T-1;}
+$('t').oninput=e=>{t=+e.target.value;draw();refreshTip();};
+let playing=false,last=0;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now){if(!playing)return;const dt=Math.min(.1,(now-last)/1000);last=now;t+=dt*(reduce?1:3);if(t>WX.T-1)t=NOW;$('t').value=t;draw();refreshTip();requestAnimationFrame(loop);}
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'❚❚':'▶';$('play').setAttribute('aria-label',playing?'Pausar':'Reproducir');if(playing){last=performance.now();requestAnimationFrame(loop);}};
+$('lCloud').onchange=$('lRain').onchange=draw;
+$('lMun').onchange=e=>{showMun=e.target.checked;draw();};
+const LG={temp:['Temperatura','°C',TSTOPS,'A 2 m del suelo, cada hora. Cifras: media estimada por provincia; al acercarte, estimación del modelo en cada municipio.'],acc:['Lluvia acumulada','mm',ASTOPS,''],wind:['Viento','km/h',WSTOPS,'Velocidad a 10 m; las partículas se mueven hacia donde sopla, con el color de su velocidad y más rápido cuanto más fuerte.']};
+function legend(){$('lgCielo').style.display=mode==='cielo'?'grid':'none';$('lgOther').hidden=mode==='cielo';if(mode==='cielo')return;
+  const [ti,u,S,sub]=LG[mode];$('lgT').textContent=ti;$('lgU').textContent=u;
+  const last=S.length-1;
+  if(mode==='wind'){// particles use classes: one solid block per class, labelled at the class boundaries
+    PCOL[0][1]=css('--ink')==='#e8ecec'?'#d5dade':'#6f7d88';const n=PCOL.length;
+    $('rampO').style.background=`linear-gradient(90deg,${PCOL.map(([,c],i)=>`${c} ${i/n*100}% ${(i+1)/n*100}%`).join(',')})`;
+    setTicks($('ticksO'),[['0',0],...PCOL.slice(1).map(([v],i)=>[String(v),(i+1)/n]),['',1]]);}
+  else{$('rampO').style.background=`linear-gradient(90deg,${S.map(([,c],i)=>`rgba(${c[0]},${c[1]},${c[2]},${Math.max(.45,c[3]/255)}) ${i/last*100}%`).join(',')})`;
+    const lab=(v,i)=>i===0&&mode==='temp'?'≤'+dec(v):i===last?'≥'+dec(v):dec(v);
+    setTicks($('ticksO'),S.map(([v],i)=>[lab(v,i),i/last]).filter((x,i)=>S.length<9||i===0||i===last||(S[i][0]%10===0&&i<last-1)));}
+  $('accWin').hidden=mode!=='acc';
+  if(mode==='acc')accText();else $('lgSub').textContent=sub;}
+function accText(){const k=Math.round(t),a=Math.max(0,k-accWin),h=x=>fmtH.format(new Date(t0+x*WX.step*1000));
+  $('lgSub').textContent=`Precipitación acumulada entre las ${h(a)} y las ${h(k)}${k>nowK()?' (prevista)':''}. Cifras: media estimada por provincia; al acercarte, estimación en cada municipio.`;}
+document.querySelectorAll('#accWin button').forEach(b=>b.onclick=()=>{accWin=+b.dataset.h;document.querySelectorAll('#accWin button').forEach(x=>x.setAttribute('aria-pressed',x===b));legend();draw();refreshTip();});
+document.querySelectorAll('.layers button').forEach(b=>{if((b.dataset.m==='temp'&&!HAS.temp)||(b.dataset.m==='wind'&&!HAS.wind))b.hidden=true;
+  b.onclick=()=>{mode=b.dataset.m;cv.setAttribute('aria-label','Mapa de España: '+b.textContent.trim().toLowerCase());windKick();document.querySelectorAll('.layers button').forEach(x=>x.setAttribute('aria-pressed',x===b));legend();draw();refreshTip();};});
+$('avBtn').onclick=()=>{showAv=!showAv;$('avBtn').setAttribute('aria-pressed',showAv);$('avLeg').hidden=!showAv;draw();refreshTip();};
+if(!AV.warnings.length&&!Object.keys(AV.zones).length&&!AV.updated)$('avBtn').hidden=true;
+// ---- hover readout
+const tip=$('tip');let tipPt=null;
+function provAt(lon,lat,can){for(const p of provPaths){if(p.can!==can)continue;let inside=false;for(const r of p.rings){for(let i=0,j=r.length-1;i<r.length;j=i++){const [xi,yi]=r[i],[xj,yj]=r[j];if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)inside=!inside;}}if(inside)return GEO.names[p.c];}return null;}
+// where the wind comes from, as a Spanish compass point
+function compass(u,v){if(Math.hypot(u,v)<1)return 'calma';const a=(Math.atan2(-u,-v)*180/Math.PI+360)%360;return 'del '+['N','NE','E','SE','S','SO','O','NO'][Math.round(a/45)%8];}
+function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromScreen(tipPt.x,tipPt.y);const v=valueAt(g.lon,g.lat,t);if(!v){tip.style.display='none';return;}
+  const name=provAt(g.lon,g.lat,g.can),pp=name&&provPaths.find(p=>GEO.names[p.c]===name&&p.can===g.can),pm=pp&&PROV_MODES[mode]?provMean(pp,PROV_MODES[mode])??0:0;const mm=v.rain;
+  const mn=munAt(g.lon,g.lat);
+  const f1=x=>x.toFixed(1).replace('.',','),sky=v.cloud<15?'Despejado':v.cloud<40?'Poco nuboso':v.cloud<75?'Nuboso':'Cubierto',
+    rainTxt=mm<0.1?'Sin lluvia':mm<2?'Lluvia débil':mm<15?'Lluvia moderada':'Lluvia fuerte',
+    arrow=v.ws!=null&&Math.hypot(v.u,v.v)>=1?`<svg viewBox="-6 -6 12 12"><path d="M0-5L3.5 3L0 1.2L-3.5 3Z" fill="currentColor" transform="rotate(${(Math.atan2(v.u,v.v)*180/Math.PI).toFixed(0)})"/></svg>`:'';
+  tip.innerHTML=`<div class="hd"><b>${mn||name||'Mar'}</b>${mn&&name&&mn!==name?`<small>Provincia de ${name}</small>`:''}</div>`+
+    `<div class="hero">${v.temp!=null?`<div class="tv">${Math.round(v.temp)}<sup>°C</sup></div>`:''}<div class="sky"><strong>${sky}</strong>${rainTxt}</div></div>`+
+    `<div class="stats"><div><span>Nubes</span><em>${Math.round(v.cloud)} %</em></div><div><span>Precip.</span><em>${mm<0.1?'0':f1(mm)} mm/h</em></div>${v.ws!=null?`<div><span>Viento</span><em>${Math.round(v.ws)} km/h${arrow}</em></div>`:''}</div>`+
+    (mode==='acc'?`<div class="ex"><span>Acumulada ${accWin} h</span><span>${v.acc<0.1?'0':f1(v.acc)} mm</span></div>`:'')+
+    `<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
+  if(showAv){const ws=avAt(g.lon,g.lat,g.can),seen=new Set();if(ws.length)tip.innerHTML+=`<div class="av"><div style="color:var(--soft)">${ws[0].zn}</div>${ws.filter(w=>{const k=w.ph+w.d;if(seen.has(k))return false;seen.add(k);return true;}).map(w=>`<div><i style="background:rgb(${AVCOL[w.lv]})"></i><span><b style="display:inline;font:500 12px var(--sans);text-transform:none;letter-spacing:0">${w.ph} · ${AVNAME[w.lv]}</b> ${w.d} Hasta ${fmtDay.format(new Date(w.b+1000))===fmtDay.format(new Date(hourMs()))?'las '+fmtH.format(new Date(w.b+1000)):'el '+fmtDay.format(new Date(w.b+1000))+', '+fmtH.format(new Date(w.b+1000))}.</span></div>`).join('')}</div>`;}
+  tip.style.display='block';if(W>640){const w=tip.offsetWidth,h=tip.offsetHeight,bot=document.querySelector('.dock').getBoundingClientRect().top-8;
+    const x=tipPt.x+16+w>W-10?tipPt.x-16-w:tipPt.x+16,y=tipPt.y+16+h>bot?tipPt.y-16-h:tipPt.y+16;
+    tip.style.left=Math.max(10,x)+'px';tip.style.top=Math.max(10,Math.min(y,bot-h))+'px';}}
+// ---- zoom & pan: wheel or pinch zooms around the pointer, drag pans, double-click resets
+function zoomAt(px,py,k){const z=Math.max(1,Math.min(20,S*k/S0));k=z*S0/S;OX=px-(px-OX)*k;OY=py-(py-OY)*k;S*=k;clampView();draw();refreshTip();}
+function clampView(){const m=60,[x0,y0]=[OX+BB[0]*S,OY-BB[3]*S],[x1,y1]=[OX+BB[2]*S,OY-BB[1]*S];
+  if(x1<m)OX+=m-x1;if(x0>W-m)OX-=x0-(W-m);if(y1<m)OY+=m-y1;if(y0>H-m)OY-=y0-(H-m);}
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0018)));},{passive:false});
+cv.addEventListener('dblclick',()=>fit());
+const ptrs=new Map();let pinch0=null,dragged=false;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY});dragged=false;
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),s:S};}
+  tipPt={x:e.clientX,y:e.clientY};refreshTip();});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);
+  if(p){const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===2&&pinch0){const [a,b]=[...ptrs.values()];zoomAt((a.x+b.x)/2,(a.y+b.y)/2,pinch0.s*Math.hypot(a.x-b.x,a.y-b.y)/pinch0.d/S);return;}
+    // a few pixels of finger wobble is a tap, not a drag
+    if(!dragged&&Math.hypot(e.clientX-p.x0,e.clientY-p.y0)<7){p.x-=dx;p.y-=dy;return;}
+    if(Math.abs(dx)+Math.abs(dy)>0){dragged=true;OX+=dx;OY+=dy;clampView();draw();cv.style.cursor='grabbing';tipPt=null;refreshTip();return;}}
+  tipPt={x:e.clientX,y:e.clientY};refreshTip();});
+const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;cv.style.cursor='';};
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){tipPt=null;refreshTip();}});
+// ---- GIF export: records the current view between two hours. Self-contained GIF89a encoder:
+// median-cut palette shared by all frames (so colours don't flicker), LZW per frame.
+function gifEncode(frames,w,h,delays){
+  const hist=new Uint32Array(32768),key=(d,i)=>((d[i]>>3)<<10)|((d[i+1]>>3)<<5)|(d[i+2]>>3);
+  for(const f of frames)for(let i=0;i<f.length;i+=12)hist[key(f,i)]++;
+  const ch=(c,k)=>k===0?c>>10:k===1?(c>>5)&31:c&31;let boxes=[[]];for(let c=0;c<32768;c++)if(hist[c])boxes[0].push(c);
+  while(boxes.length<256){let bi=-1,bs=0,bk=0;
+    boxes.forEach((b,i)=>{if(b.length<2)return;let r=0,kk=0;for(let k=0;k<3;k++){let mn=31,mx=0;for(const c of b){const v=ch(c,k);if(v<mn)mn=v;if(v>mx)mx=v;}if(mx-mn>r){r=mx-mn;kk=k;}}
+      let n=0;for(const c of b)n+=hist[c];const sc=r*Math.sqrt(n);if(sc>bs){bs=sc;bi=i;bk=kk;}});
+    if(bi<0)break;const b=boxes[bi];b.sort((x,y)=>ch(x,bk)-ch(y,bk));let tot=0;for(const c of b)tot+=hist[c];let acc=0,m=0;for(;m<b.length-2;m++){acc+=hist[b[m]];if(acc>=tot/2)break;}
+    boxes.splice(bi,1,b.slice(0,m+1),b.slice(m+1));}
+  const pal=new Uint8Array(768),map=new Int16Array(32768).fill(-1);
+  boxes.forEach((b,i)=>{let r=0,g=0,bl=0,n=0;for(const c of b){const q=hist[c];r+=(c>>10)*q;g+=((c>>5)&31)*q;bl+=(c&31)*q;n+=q;map[c]=i;}if(n){pal[i*3]=r/n*8.25;pal[i*3+1]=g/n*8.25;pal[i*3+2]=bl/n*8.25;}});
+  const near=c=>{const r=(c>>10)*8+4,g=((c>>5)&31)*8+4,b=(c&31)*8+4;let bi=0,bd=1e9;for(let i=0;i<boxes.length;i++){const dr=pal[i*3]-r,dg=pal[i*3+1]-g,db=pal[i*3+2]-b,d=dr*dr+dg*dg+db*db;if(d<bd){bd=d;bi=i;}}return map[c]=bi;};
+  const out=[];const B=(...a)=>{for(const v of a)out.push(v);},W16=v=>B(v&255,v>>8);
+  B(71,73,70,56,57,97);W16(w);W16(h);B(0xF7,0,0);for(const v of pal)out.push(v);
+  B(0x21,0xFF,11,...[...'NETSCAPE2.0'].map(c=>c.charCodeAt(0)),3,1,0,0,0);
+  const idx=new Uint8Array(w*h);
+  frames.forEach((f,fi)=>{for(let p=0,i=0;p<idx.length;p++,i+=4){const c=key(f,i),v=map[c];idx[p]=v>=0?v:near(c);}
+    B(0x21,0xF9,4,0x04);W16(delays[fi]);B(0,0);B(0x2C);W16(0);W16(0);W16(w);W16(h);B(0,8);
+    const data=lzw(idx);for(let i=0;i<data.length;i+=255){const n=Math.min(255,data.length-i);out.push(n);for(let k=0;k<n;k++)out.push(data[i+k]);}B(0);});
+  B(0x3B);return new Uint8Array(out);}
+function lzw(idx){const out=[];let cur=0,nb=0,size=9,next=258,dict=new Map();
+  const emit=c=>{cur|=c<<nb;nb+=size;while(nb>=8){out.push(cur&255);cur>>>=8;nb-=8;}};
+  const grow=()=>{if(next>=(1<<size)&&size<12)size++;};
+  emit(256);let prefix=idx[0];
+  for(let i=1;i<idx.length;i++){const k=idx[i],kk=prefix*256+k,v=dict.get(kk);if(v!==undefined){prefix=v;continue;}
+    emit(prefix);grow();if(next<4096)dict.set(kk,next++);else{emit(256);dict=new Map();size=9;next=258;}prefix=k;}
+  emit(prefix);grow();emit(257);if(nb>0)out.push(cur&255);return out;}
+const gPanel=$('gifPanel'),fmtOpt=new Intl.DateTimeFormat('es-ES',{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});
+{const o=[];for(let k=0;k<WX.T;k++)o.push(`<option value="${k}">${fmtOpt.format(new Date(t0+k*WX.step*1000))}${k===NOW?' (ahora)':''}</option>`);$('gFrom').innerHTML=$('gTo').innerHTML=o.join('');}
+$('gifBtn').onclick=()=>{const open=gPanel.hidden;gPanel.hidden=!open;$('gifBtn').setAttribute('aria-expanded',open);
+  if(open){const k=Math.round(t);$('gFrom').value=Math.min(k,WX.T-2);$('gTo').value=Math.min(WX.T-1,k+24);}};
+const downloadsP=window.claude?claude.use('downloads'):Promise.resolve(null);let gUrl=null;
+$('gGo').onclick=async()=>{let a=+$('gFrom').value,b=+$('gTo').value;if(b<a)[a,b]=[b,a];if(b===a){$('gSt').textContent='Elige dos horas distintas.';return;}
+  const go=$('gGo');go.disabled=true;if(playing)$('play').click();
+  const dockTop=document.querySelector('.dock').getBoundingClientRect().top,ch=Math.max(50,Math.floor(dockTop)-6),cw=W;
+  const ow=Math.min(+$('gSize').value,cw),oh=Math.round(ch*ow/cw),oc=document.createElement('canvas');oc.width=ow;oc.height=oh;const o=oc.getContext('2d');
+  const keepT=t,keepTip=tipPt;try{gifRec=true;tipPt=null;refreshTip();const frames=[];
+  const FPS=8,N=Math.max(2,Math.round(+$('gDur').value*FPS)),delays=[];
+  for(let f=0;f<N;f++){const k=a+(b-a)*f/(N-1);t=k;draw();delays.push(Math.round((f+1)*100/FPS)-Math.round(f*100/FPS));o.drawImage(cv,0,0,cw*DPR,ch*DPR,0,0,ow,oh);
+    const lbl=fmtFull.format(new Date(t0+Math.round(k)*WX.step*1000))+(Math.round(k)>nowK()?' · previsión':' · modelo')+(mode==='cielo'?'':' · '+LG[mode][0]+(mode==='acc'?' en '+accWin+' h':'')),fs=Math.max(11,Math.round(ow/48));
+    o.font=`600 ${fs}px `+css('--sans');o.textBaseline='top';const tw=o.measureText(lbl).width;o.fillStyle=css('--glass');o.fillRect(8,8,tw+16,fs+12);o.fillStyle=css('--ink');o.fillText(lbl,16,14);
+    o.font=`${Math.round(fs*.75)}px `+css('--sans');o.textAlign='right';o.textBaseline='bottom';o.fillStyle=css('--soft');o.fillText('Cielo de España · datos Open-Meteo',ow-8,oh-6);o.textAlign='left';
+    frames.push(o.getImageData(0,0,ow,oh).data);$('gSt').textContent=`Dibujando ${f+1} de ${N}…`;await new Promise(r=>setTimeout(r,0));}
+  gifRec=false;windKick();t=keepT;tipPt=keepTip;draw();$('gSt').textContent='Codificando…';await new Promise(r=>setTimeout(r,30));
+  const bytes=gifEncode(frames,ow,oh,delays),blob=new Blob([bytes],{type:'image/gif'});
+  if(gUrl)URL.revokeObjectURL(gUrl);gUrl=URL.createObjectURL(blob);$('gImg').src=gUrl;$('gImg').hidden=false;
+  const mb=(blob.size/1048576).toFixed(1).replace('.',','),name=`cielo-${new Date(t0+a*3600e3).toISOString().slice(0,13).replace('T','-')}h-${b-a}h.gif`;
+  const dl=await downloadsP;
+  if(dl){try{await dl.save({filename:name,data:blob});$('gSt').textContent=`GIF guardado (${mb} MB).`;}
+    catch(e){$('gSt').textContent=e&&e.code==='declined'?`No se guardó. La vista previa sigue aquí (${mb} MB).`:`No se pudo guardar desde aquí (${mb} MB): mantén pulsada la vista previa para guardarla.`;}}
+  else $('gSt').textContent=`Listo (${mb} MB): mantén pulsada o haz clic derecho en la vista previa para guardarla.`;
+  }catch(e){console.error(e);$('gSt').textContent='No se pudo crear el GIF. Prueba con menos horas o un tamaño menor.';}
+  finally{if(gifRec){gifRec=false;windKick();t=keepT;tipPt=keepTip;draw();}go.disabled=false;}};
+// ---- labels & theme
+if(WX.example){$('badge').hidden=false;$('note').textContent='Simulación de un frente atlántico con chubascos en el norte y tormentas de tarde en el centro. No es una previsión real: la página está lista para cargar la de Open-Meteo.';}
+else $('note').textContent=(WX.past?'Últimos '+Math.round(WX.past/24)+' días y previsión de '+(WX.T-WX.past)+' h':'Previsión horaria')+' de Open-Meteo, rejilla de '+String(WX.grids[0].d).replace('.',',')+'°.'+(WX.updated?' Datos generados el '+fmtFull.format(new Date(WX.updated))+'.':'');
+if(WX.updated&&!WX.example)$('src').textContent='Open-Meteo · datos del '+fmtFull.format(new Date(WX.updated));
+if(AV.updated)$('note').textContent+=' Avisos de AEMET consultados el '+fmtFull.format(new Date(AV.updated))+'.';
+const rethemed=()=>{paintRelief();$('rampC').style.background=`linear-gradient(90deg,rgba(${css('--cloud')},0),rgba(${css('--cloud')},.55) 50%,rgba(${css('--cloudShade')},.85))`;draw();};matchMedia('(prefers-color-scheme: dark)').addEventListener('change',rethemed);
+new MutationObserver(rethemed).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+// resizing keeps the place and zoom you were looking at; dblclick or ⌂ re-frames Spain
+addEventListener('resize',()=>{if(!S0){fit();return;}const z=S/S0,c=fromScreen(W/2,H/2),[X,Y]=pj(c.lon,c.lat,c.can);fit();if(z>1.01){S=S0*z;const [sx,sy]=toScreen(X,-Y);OX+=W/2-sx;OY+=H/2-sy;clampView();draw();}});
+$('zIn').onclick=()=>zoomAt(W/2,H/2,1.6);$('zOut').onclick=()=>zoomAt(W/2,H/2,1/1.6);$('zHome').onclick=()=>fit();
+// open on the current hour
+// open at the real current hour when the data covers it
+t=Math.max(NOW,Math.min(WX.T-1,nowK()));$('t').value=t;legend();
+fit();
+document.fonts&&document.fonts.ready.then(draw);
+</script>
