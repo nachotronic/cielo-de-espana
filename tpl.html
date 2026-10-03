@@ -73,11 +73,11 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 .stale{color:var(--accent)}
 .legend #src{display:none}
 @media (max-width:640px){
-  .head{left:12px}.legend{right:12px;left:auto;top:auto;bottom:calc(116px + env(safe-area-inset-bottom,0px));width:150px;padding:7px 9px}
+  .head{left:12px}.legend{right:12px;left:12px;top:auto;bottom:calc(128px + env(safe-area-inset-bottom,0px));width:auto;padding:7px 10px}
   .layers{left:12px;right:12px;top:calc(56px + env(safe-area-inset-top,0px));justify-content:space-between}.layers button{padding:6px 8px;flex:1}.layers .l{display:none}.layers .s{display:inline}
   .legend .note{display:none}.legend #avN{display:block}h1{font-size:28px}.when{padding-right:132px}.when .hp{display:none}
   #tip{left:12px!important;right:12px;width:auto;top:calc(110px + env(safe-area-inset-top,0px))!important}
-  .zoom{left:12px;top:auto;bottom:calc(128px + env(safe-area-inset-bottom,0px));transform:none}.zoom button{width:42px;height:42px}
+  .zoom{left:auto;right:12px;top:calc(104px + env(safe-area-inset-top,0px));transform:none;display:flex}.zoom button{width:38px;height:38px}.zoom button+button{border-top:0;border-left:1px solid var(--line)}
   .accwin button{padding:9px 0;font-size:10.5px;white-space:nowrap}.legend #src{display:block}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -137,10 +137,12 @@ const $=id=>document.getElementById(id);
 const GEO=JSON.parse($('geo').textContent),WX=JSON.parse($('wx').textContent);
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 // ---- projection: equirectangular around Spain; Canarias scaled into an inset in the Atlantic, west of the Algarve
-const LAT0=40.2,KX=Math.cos(LAT0*Math.PI/180),CK=0.6,CX0=-12.4,CY0=35.95,CLON=-18.6,CLAT=27.3;
+// (on a portrait phone the inset goes under Andalucía instead, so the frame can be narrower and the peninsula bigger)
+const MOB0=innerWidth<=640&&innerHeight>innerWidth;
+const LAT0=40.2,KX=Math.cos(LAT0*Math.PI/180),CK=0.6,CX0=MOB0?-9.4:-12.4,CY0=MOB0?34.25:35.95,CLON=-18.6,CLAT=27.3;
 const isCan=c=>c===35||c===38;
 const pj=(lon,lat,can)=>can?[((lon-CLON)*CK+CX0)*KX,(lat-CLAT)*CK+CY0]:[lon*KX,lat];
-const BB=[-12.45*KX,35.9,4.4*KX,43.85];
+const BB=MOB0?[-9.5*KX,34.2,4.4*KX,43.85]:[-12.45*KX,35.9,4.4*KX,43.85];
 // ---- weather grids
 const decode=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;};
 const GR=WX.grids.map(g=>({...g,can:g.id==='can',cloud:decode(g.cloud),rain:decode(g.rain),cv:document.createElement('canvas')}));
@@ -249,7 +251,9 @@ const CITIES=[['Madrid',-3.7038,40.4168,1],['Barcelona',2.1686,41.3874,-1],['Val
 // ---- view
 const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
 function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
-  const mob=W<=640,top=mob?64:52,bot=mob?170:100;const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
+  const mob=W<=640;let top=mob?64:52,bot=mob?170:100;
+  // portrait phone: use the space between the layer buttons and the legend strip
+  if(MOB0&&mob){const lr=document.querySelector('.layers').getBoundingClientRect(),gr=document.querySelector('.legend').getBoundingClientRect();top=lr.bottom+8;bot=H-gr.top+8;}const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
   S0=S;OX=(W-(BB[2]-BB[0])*S)/2-BB[0]*S+(mob?0:Math.min(40,(W-16-(BB[2]-BB[0])*S)/2));OY=top+((H-top-bot)-(BB[3]-BB[1])*S)/2+BB[3]*S;draw();}
 const toScreen=(X,Y)=>[OX+X*S,OY+Y*S];
 function fromScreen(px,py){const X=(px-OX)/S,Y=-(py-OY)/S;
