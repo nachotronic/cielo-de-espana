@@ -49,5 +49,7 @@ async function get(pts){
       day:{wc:g.dwc.toString('base64'),tx:g.dtx.toString('base64'),tn:g.dtn.toString('base64'),pr:g.dpr.toString('base64'),ws:g.dws.toString('base64')}}))};
   fs.writeFileSync(__dirname+'/wx.json',JSON.stringify(out));
   let mx=0,wet=0;for(const g of grids)for(const v of g.rain){mx=Math.max(mx,v);if(v>=2)wet++;}
+  // shows up as a run annotation (readable via the API), so the daily block can be checked without logs
+  console.log(`::notice::wx ok, daily outlook ${dstart?'from '+dstart:'MISSING'}`);
   console.log('bytes',fs.statSync(__dirname+'/wx.json').size,'start',out.start,'max mm/h',mx/10,'wet cells',wet);
 })().catch(e=>{console.error(e);process.exit(1);});
