@@ -67,6 +67,13 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 #tip svg .pr{fill:#3c8cdc;opacity:.75}#tip svg .mid{stroke:var(--line);stroke-dasharray:2 2;vector-effect:non-scaling-stroke}#tip svg .ax{stroke:var(--line);vector-effect:non-scaling-stroke}
 #tip svg .now{stroke:var(--ink);stroke-width:1;opacity:.5;vector-effect:non-scaling-stroke}#tip svg .dot{fill:var(--accent);stroke:var(--glass);stroke-width:1}
 #tip svg .lb{font:9px var(--sans);fill:var(--soft)}
+#tip .week{margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}#tip .wk{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;text-align:center}
+#tip .wk div{display:grid;justify-items:center;gap:1px;font-variant-numeric:tabular-nums}#tip .wk .dn{font-size:10px;color:var(--soft);text-transform:capitalize}
+#tip .wk svg{width:22px;height:22px;margin:1px 0}#tip .wk .tt{display:grid;justify-items:center}#tip .wk b{font:600 12px var(--sans);color:var(--accent)}#tip .wk i{font-style:normal;font-size:11px;color:var(--soft)}
+#tip .wk .wp{font:10.5px var(--mono);color:#3c8cdc}#tip .wk .wp.z{opacity:.45}#tip .wk .ww{font:10.5px var(--mono);color:var(--soft)}
+#tip .wk .ic{fill:#c3ccd5;stroke:#8a96a3;stroke-width:1}#tip .wk .is{fill:#f5b800}#tip .wk .ir{stroke:#f5b800;stroke-width:1.8;stroke-linecap:round;fill:none}
+#tip .wk .ig{stroke:#9aa5b1;stroke-width:1.8;stroke-linecap:round;fill:none}#tip .wk .id{stroke:#3c8cdc;stroke-width:1.8;stroke-linecap:round;fill:none}
+#tip .wk .iw{stroke:#7fa7cf;stroke-width:2.6;stroke-linecap:round;fill:none}#tip .wk .it{stroke:#e8a400;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;fill:none}
 #tip .ex{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:11.5px}#tip .ex span:first-child{color:var(--soft)}#tip .ex span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
 #tip .av{margin-top:8px;padding-top:7px;border-top:1px solid var(--line);display:grid;gap:4px;font-size:11.5px}#tip .av div{display:flex;gap:6px;align-items:baseline}#tip .av i{flex:none;width:9px;height:9px;border-radius:2px;transform:translateY(1px)}
 .note{font-size:9.5px;line-height:1.4;color:var(--soft)}
@@ -105,7 +112,7 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   .legend #avBtn,.legend #gifBtn{position:static;font-size:12px;padding:7px 10px}.when{padding-right:0}
   #tip{grid-template-columns:1fr auto;column-gap:12px;padding:9px 12px 8px}#tip>*{grid-column:1/-1}
   #tip .hd{grid-column:1;grid-row:1;align-self:center}#tip .hero{grid-column:2;grid-row:1;margin:0;gap:8px}#tip .hero .tv{font-size:30px}
-  #tip .stats{margin-top:7px;padding-top:6px}#tip .chart{margin-top:6px;padding-top:6px}#tip svg{height:44px}#tip .est{display:none}#tip svg{margin-top:10px}
+  #tip .stats{margin-top:7px;padding-top:6px}#tip .chart{margin-top:6px;padding-top:6px}#tip svg{height:44px}#tip .est{display:none}#tip .chart svg{margin-top:10px;height:38px}#tip .wk .tt{display:flex;gap:3px;align-items:baseline}#tip .wk svg{width:20px;height:20px;margin:0}#tip .week{margin-top:6px;padding-top:5px}
   .legend #ticksR span:nth-child(2){display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -482,6 +489,24 @@ function tipChart(lon,lat){const k0=Math.max(NOW,Math.min(WX.T-2,nowK())),k1=WX.
   const ks=Math.round(t)-k0;if(ks>=0&&ks<n)g+=`<line x1="${x(ks)}" x2="${x(ks)}" y1="${top-2}" y2="${bot}" class="now"/>`+(hasT?`<circle cx="${x(ks)}" cy="${y(T[ks])}" r="2.6" class="dot"/>`:'');
   const f1=v=>v.toFixed(1).replace('.',',');
   return `<div class="chart"><div class="ch"><span>Próximas ${n} h</span><span>${hasT?`<b class="ct">${Math.round(tmin)}–${Math.round(tmax)} °C</b>`:''}${pmax>=0.1?` · <b class="cp">${f1(pmax)} mm/h máx</b>`:' · sin lluvia'}</span></div><svg viewBox="0 0 ${W2} ${bot+2}" preserveAspectRatio="none" aria-hidden="true">${g}<line x1="2" x2="${W2-2}" y1="${bot}" y2="${bot}" class="ax"/></svg></div>`;}
+// ---- 7-day outlook (daily block of newer wx.json): nearest grid point, WMO sky code drawn as a small icon
+GR.forEach((g,gi)=>{const d=WX.grids[gi].day;if(d)g.day={wc:decode(d.wc),tx:decode(d.tx),tn:decode(d.tn),pr:decode(d.pr),ws:decode(d.ws)};});
+const CLD='<path d="M7 19h10.5a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 9.6 4.7 4.7 0 0 0 7 19z" class="ic"/>',
+  ICON={sun:'<circle cx="12" cy="12" r="4.6" class="is"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" class="ir"/>',
+    part:'<circle cx="9" cy="8.5" r="4" class="is"/><path d="M9 1.8v1.6M2.3 8.5h1.6M4.3 3.8l1.1 1.1M13.7 3.8l-1.1 1.1" class="ir"/>'+'<g transform="translate(2.5 2.5) scale(.9)">'+CLD+'</g>',
+    cloud:CLD,fog:'<path d="M4 8h16M3 12h18M5 16h14M7 20h10" class="ig"/>',
+    rain:CLD.replace('19h','15h')+'<path d="M8 18l-1 3M12.5 18l-1 3M17 18l-1 3" class="id"/>',
+    snow:CLD.replace('19h','15h')+'<path d="M8 19.5h.01M12 18h.01M16 19.5h.01M10 22h.01M14 22h.01" class="iw"/>',
+    storm:CLD.replace('19h','15h')+'<path d="M12.5 14.5l-2.5 4h3l-2 4" class="it"/>'},
+  wmo=c=>c<=1?(c?'part':'sun'):c===2?'part':c===3?'cloud':c<=48?'fog':c>=95?'storm':(c>=71&&c<=77)||c===85||c===86?'snow':'rain',
+  WMO_TXT={sun:'Despejado',part:'Poco nuboso',cloud:'Nuboso',fog:'Niebla',rain:'Lluvia',snow:'Nieve',storm:'Tormenta'};
+function tipWeek(lon,lat){if(!WX.dstart)return '';let g=null,i=0,j=0;
+  for(const q of GR){const fi=Math.round((lon-q.lon0)/q.d),fj=Math.round((lat-q.lat0)/q.d);if(q.day&&fi>=0&&fj>=0&&fi<q.nx&&fj<q.ny){g=q;i=fi;j=fj;break;}}
+  if(!g)return '';const n=g.nx*g.ny,today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Madrid'}),t0d=Date.parse(WX.dstart+'T12:00:00Z');
+  let cols='';for(let e=0;e<WX.D;e++){const dt=new Date(t0d+e*864e5),ds=dt.toISOString().slice(0,10);if(ds<today)continue;
+    const k=e*n+j*g.nx+i,ic=wmo(g.day.wc[k]),pr=g.day.pr[k]/2,lab=ds===today?'Hoy':new Intl.DateTimeFormat('es-ES',{weekday:'short',timeZone:'UTC'}).format(dt).replace('.','');
+    cols+=`<div><span class="dn">${lab}</span><svg viewBox="0 0 24 24" role="img" aria-label="${WMO_TXT[ic]}"><title>${WMO_TXT[ic]}</title>${ICON[ic]}</svg><span class="tt"><b>${Math.round(g.day.tx[k]/3-40)}°</b><i>${Math.round(g.day.tn[k]/3-40)}°</i></span><span class="wp${pr>=0.5?'':' z'}">${pr>=0.5?(pr<10?pr.toFixed(1).replace('.',',').replace(',0',''):Math.round(pr)):'0'}</span><span class="ww">${g.day.ws[k]}</span></div>`;}
+  return cols?`<div class="week"><div class="ch"><span>Próximos días</span><span><b class="cp">lluvia mm</b><span class="vw"> · viento km/h</span></span></div><div class="wk">${cols}</div></div>`:'';}
 function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromScreen(tipPt.x,tipPt.y);const v=valueAt(g.lon,g.lat,t);if(!v){tip.style.display='none';return;}
   const name=provAt(g.lon,g.lat,g.can),pp=name&&provPaths.find(p=>GEO.names[p.c]===name&&p.can===g.can),pm=pp&&PROV_MODES[mode]?provMean(pp,PROV_MODES[mode])??0:0;const mm=v.rain;
   const mn=munAt(g.lon,g.lat);
@@ -492,7 +517,7 @@ function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromSc
     `<div class="hero">${v.temp!=null?`<div class="tv">${Math.round(v.temp)}<sup>°C</sup></div>`:''}<div class="sky"><strong>${sky}</strong>${rainTxt}</div></div>`+
     `<div class="stats"><div><span>Nubes</span><em>${Math.round(v.cloud)} %</em></div><div><span>Precip.</span><em>${mm<0.1?'0':f1(mm)} mm/h</em></div>${v.ws!=null?`<div><span>Viento</span><em>${Math.round(v.ws)} km/h${arrow}</em></div>`:''}</div>`+
     (mode==='acc'?`<div class="ex"><span>Acumulada ${accWin} h</span><span>${v.acc<0.1?'0':f1(v.acc)} mm</span></div>`:'')+
-    tipChart(g.lon,g.lat)+`<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
+    tipChart(g.lon,g.lat)+tipWeek(g.lon,g.lat)+`<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
   if(showAv){const ws=avAt(g.lon,g.lat,g.can),seen=new Set();if(ws.length)tip.innerHTML+=`<div class="av"><div style="color:var(--soft)">${ws[0].zn}</div>${ws.filter(w=>{const k=w.ph+w.d;if(seen.has(k))return false;seen.add(k);return true;}).map(w=>`<div><i style="background:rgb(${AVCOL[w.lv]})"></i><span><b style="display:inline;font:500 12px var(--sans);text-transform:none;letter-spacing:0">${w.ph} · ${AVNAME[w.lv]}</b> ${w.d} Hasta ${fmtDay.format(new Date(w.b+1000))===fmtDay.format(new Date(hourMs()))?'las '+fmtH.format(new Date(w.b+1000)):'el '+fmtDay.format(new Date(w.b+1000))+', '+fmtH.format(new Date(w.b+1000))}.</span></div>`).join('')}</div>`;}
   tip.style.display=W>640?'block':'grid';if(W>640){const w=tip.offsetWidth,h=tip.offsetHeight,bot=document.querySelector('.dock').getBoundingClientRect().top-8;
     const x=tipPt.x+16+w>W-10?tipPt.x-16-w:tipPt.x+16,y=tipPt.y+16+h>bot?tipPt.y-16-h:tipPt.y+16;
