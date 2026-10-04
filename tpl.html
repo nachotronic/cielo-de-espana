@@ -59,7 +59,7 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 #tip .stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);padding-top:8px;gap:4px}
 #tip .stats div{display:grid;gap:1px}#tip .stats span{color:var(--soft);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
 #tip .stats em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
-#tip .stats svg{width:11px;height:11px;vertical-align:-1px;margin-left:3px}
+#tip .stats svg{display:inline;width:11px;height:11px;vertical-align:-1px;margin-left:3px}
 #tip .est{margin-top:7px;font-size:10px;color:var(--soft)}
 #tip .chart{margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}#tip .ch{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--soft);margin-bottom:3px}
 #tip .ch b{font-weight:600}#tip .ct{color:var(--accent)}#tip .cp{color:#3c8cdc}
@@ -98,6 +98,15 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   #infoBtn{display:inline-block;margin-left:auto}.legend:not(.info) #lgSub,.legend:not(.info) #src{display:none!important}.legend.info #note,.legend.info .hint{display:block}.legend.info #src{display:none!important}.legend.info~.zoom{display:none}.zoom{top:calc(136px + env(safe-area-inset-top,0px))}
   .zoom{left:auto;right:12px;top:calc(140px + env(safe-area-inset-top,0px));transform:none;display:flex}.zoom button{width:46px;height:46px;font-size:22px}.zoom button+button{border-top:0;border-left:1px solid var(--line)}
   .accwin button{padding:9px 0;font-size:10.5px;white-space:nowrap}.legend #src{display:block}
+  /* phone: the legend is a flat band sitting on the dock (bottom offset set in fit), the tooltip a flat band under the layer buttons */
+  .legend{padding:8px 12px;gap:6px;border-radius:10px}.legend #lgCielo{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;grid-auto-flow:column;column-gap:16px;row-gap:4px!important}
+  .legend .ticks{font-size:10px}.legend .ticks.abs{height:13px}#munHint{display:none}
+  .legend .lbtn{display:flex;gap:8px;align-items:center;margin-left:auto}.legend .lbtn #infoBtn{margin-left:0;width:32px;height:32px}
+  .legend #avBtn,.legend #gifBtn{position:static;font-size:12px;padding:7px 10px}.when{padding-right:0}
+  #tip{grid-template-columns:1fr auto;column-gap:12px;padding:9px 12px 8px}#tip>*{grid-column:1/-1}
+  #tip .hd{grid-column:1;grid-row:1;align-self:center}#tip .hero{grid-column:2;grid-row:1;margin:0;gap:8px}#tip .hero .tv{font-size:30px}
+  #tip .stats{margin-top:7px;padding-top:6px}#tip .chart{margin-top:6px;padding-top:6px}#tip svg{height:44px}#tip .est{display:none}#tip svg{margin-top:10px}
+  .legend #ticksR span:nth-child(2){display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 [hidden]{display:none!important}
@@ -120,7 +129,7 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   </div>
   <div id="lgOther" style="display:grid;gap:5px" hidden><div class="t"><span id="lgT"></span><span id="lgU"></span></div><div class="ramp" id="rampO"></div><div class="ticks abs" id="ticksO"></div><div class="accwin" id="accWin" hidden role="group" aria-label="Horas acumuladas"><button data-h="1">1 h</button><button data-h="3">3 h</button><button data-h="6" aria-pressed="true">6 h</button><button data-h="12">12 h</button><button data-h="24">24 h</button></div><div class="note" id="lgSub" style="display:block"></div></div>
   <div id="avLeg" hidden><div class="t"><span>Avisos AEMET</span></div><div class="note" id="avN" style="margin:-2px 0 4px"></div><div class="avleg"><span><i style="background:rgba(242,197,0,.14);border:2px solid #f2c500"></i>Amarillo</span><span><i style="background:rgba(240,138,0,.18);border:2px solid #f08a00"></i>Naranja</span><span><i style="background:rgba(214,32,42,.22);border:2px solid #d6202a"></i>Rojo</span></div></div>
-  <div class="t"><label><input type="checkbox" id="lMun">Municipios</label><span id="munHint" class="note" style="font-weight:400"></span><button id="infoBtn" aria-expanded="false" aria-label="Más información sobre los datos">i</button></div>
+  <div class="t"><label><input type="checkbox" id="lMun">Municipios</label><span id="munHint" class="note" style="font-weight:400"></span><span class="lbtn" id="lbtn"><button id="infoBtn" aria-expanded="false" aria-label="Más información sobre los datos">i</button></span></div>
   <div class="note" id="note"></div><div class="note" id="src"></div>
   <div class="note hint">Rueda o pellizco para acercar, arrastra para moverte, doble clic para volver.</div>
 </aside>
@@ -158,6 +167,8 @@ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim
 // ---- projection: equirectangular around Spain; Canarias scaled into an inset in the Atlantic, west of the Algarve
 // (on a portrait phone the inset goes under Andalucía instead, so the frame can be narrower and the peninsula bigger)
 const MOB0=innerWidth<=640&&innerHeight>innerWidth;
+// portrait phones: AVISOS and GIF ride in the legend band, so the dock's date line keeps the full width
+if(MOB0)document.getElementById('lbtn').prepend(document.getElementById('avBtn'),document.getElementById('gifBtn'));
 const LAT0=40.2,KX=Math.cos(LAT0*Math.PI/180),CK=0.6,CX0=MOB0?-9.4:-12.4,CY0=MOB0?34.25:35.95,CLON=-18.6,CLAT=27.3;
 const isCan=c=>c===35||c===38;
 const pj=(lon,lat,can)=>can?[((lon-CLON)*CK+CX0)*KX,(lat-CLAT)*CK+CY0]:[lon*KX,lat];
@@ -269,11 +280,14 @@ const CITIES=[['Madrid',-3.7038,40.4168,1],['Barcelona',2.1686,41.3874,-1],['Val
   ['Málaga',-4.4214,36.7213,1],['Murcia',-1.1307,37.9922,-1],['Palma',2.6502,39.5696,1],['Las Palmas',-15.4363,28.1235,1],['Alicante',-0.4810,38.3452,1]];
 // ---- view
 const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
+// portrait phone: the legend band sits on the dock and the zoom buttons on the legend, whatever their heights
+function placeBands(){const lg=document.querySelector('.legend'),zm=document.querySelector('.zoom');lg.style.bottom=(innerHeight-document.querySelector('.dock').getBoundingClientRect().top+6)+'px';
+  zm.style.top=(lg.getBoundingClientRect().top-zm.offsetHeight-10)+'px';}
+if(MOB0&&window.ResizeObserver){const ro=new ResizeObserver(()=>{if(innerWidth<=640)placeBands();});ro.observe(document.querySelector('.dock'));ro.observe(document.querySelector('.legend'));}
 function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
   const mob=W<=640;let top=mob?64:52,bot=mob?170:100;
   // portrait phone: use the space between the layer buttons and the legend strip
-  if(MOB0&&mob){const lr=document.querySelector('.layers').getBoundingClientRect(),gr=document.querySelector('.legend').getBoundingClientRect();top=lr.bottom+8;bot=H-gr.top+8;
-    const zm=document.querySelector('.zoom');zm.style.top=(gr.top-zm.offsetHeight-10)+'px';}const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
+  if(MOB0&&mob){placeBands();const lr=document.querySelector('.layers').getBoundingClientRect(),gr=document.querySelector('.legend').getBoundingClientRect();top=lr.bottom+8;bot=H-gr.top+8;}const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
   S0=S;OX=(W-(BB[2]-BB[0])*S)/2-BB[0]*S+(mob?0:Math.min(40,(W-16-(BB[2]-BB[0])*S)/2));OY=top+((H-top-bot)-(BB[3]-BB[1])*S)/2+BB[3]*S;draw();}
 const toScreen=(X,Y)=>[OX+X*S,OY+Y*S];
 function fromScreen(px,py){const X=(px-OX)/S,Y=-(py-OY)/S;
@@ -480,7 +494,7 @@ function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromSc
     (mode==='acc'?`<div class="ex"><span>Acumulada ${accWin} h</span><span>${v.acc<0.1?'0':f1(v.acc)} mm</span></div>`:'')+
     tipChart(g.lon,g.lat)+`<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
   if(showAv){const ws=avAt(g.lon,g.lat,g.can),seen=new Set();if(ws.length)tip.innerHTML+=`<div class="av"><div style="color:var(--soft)">${ws[0].zn}</div>${ws.filter(w=>{const k=w.ph+w.d;if(seen.has(k))return false;seen.add(k);return true;}).map(w=>`<div><i style="background:rgb(${AVCOL[w.lv]})"></i><span><b style="display:inline;font:500 12px var(--sans);text-transform:none;letter-spacing:0">${w.ph} · ${AVNAME[w.lv]}</b> ${w.d} Hasta ${fmtDay.format(new Date(w.b+1000))===fmtDay.format(new Date(hourMs()))?'las '+fmtH.format(new Date(w.b+1000)):'el '+fmtDay.format(new Date(w.b+1000))+', '+fmtH.format(new Date(w.b+1000))}.</span></div>`).join('')}</div>`;}
-  tip.style.display='block';if(W>640){const w=tip.offsetWidth,h=tip.offsetHeight,bot=document.querySelector('.dock').getBoundingClientRect().top-8;
+  tip.style.display=W>640?'block':'grid';if(W>640){const w=tip.offsetWidth,h=tip.offsetHeight,bot=document.querySelector('.dock').getBoundingClientRect().top-8;
     const x=tipPt.x+16+w>W-10?tipPt.x-16-w:tipPt.x+16,y=tipPt.y+16+h>bot?tipPt.y-16-h:tipPt.y+16;
     tip.style.left=Math.max(10,x)+'px';tip.style.top=Math.max(10,Math.min(y,bot-h))+'px';}}
 // ---- zoom & pan: wheel or pinch zooms around the pointer, drag pans, double-click resets
@@ -503,7 +517,7 @@ cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);
   if(e.pointerType!=='touch'){tipPt={x:e.clientX,y:e.clientY};refreshTip();}});
 const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;cv.style.cursor='';if(!ptrs.size)setTimeout(()=>{if(!ptrs.size)hadPinch=false;},50);};
 // a tap toggles the tooltip on touch screens (tap the same spot again, or anywhere after it shows, to close it)
-cv.addEventListener('pointerup',e=>{if(e.pointerType==='touch'&&!dragged&&!hadPinch&&ptrs.size===1){tipPt=tip.style.display==='block'?null:{x:e.clientX,y:e.clientY};refreshTip();}endPtr(e);});cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('pointerup',e=>{if(e.pointerType==='touch'&&!dragged&&!hadPinch&&ptrs.size===1){tipPt=tip.style.display&&tip.style.display!=='none'?null:{x:e.clientX,y:e.clientY};refreshTip();}endPtr(e);});cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){tipPt=null;refreshTip();}});
 // ---- GIF export: records the current view between two hours. Self-contained GIF89a encoder:
 // median-cut palette shared by all frames (so colours don't flicker), LZW per frame.
