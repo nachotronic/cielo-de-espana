@@ -115,6 +115,8 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   #tip .stats{margin-top:7px;padding-top:6px}#tip .chart{margin-top:6px;padding-top:6px}#tip svg{height:44px}#tip .est{display:none}#tip .chart svg{margin-top:10px;height:38px}#tip .wk .tt{display:flex;gap:3px;align-items:baseline}#tip .wk svg{width:20px;height:20px;margin:0}#tip .week{margin-top:6px;padding-top:5px}
   .legend #ticksR span:nth-child(2){display:none}
 }
+/* portrait phones (class set from JS): no title; time control on top, layer buttons under it, legend at the bottom */
+.topdock .head{display:none}.topdock .dock{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}.topdock .legend{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -175,6 +177,7 @@ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim
 // (on a portrait phone the inset goes under Andalucía instead, so the frame can be narrower and the peninsula bigger)
 const MOB0=innerWidth<=640&&innerHeight>innerWidth;
 // portrait phones: AVISOS and GIF ride in the legend band, so the dock's date line keeps the full width
+if(MOB0)document.documentElement.classList.add('topdock');
 if(MOB0)document.getElementById('lbtn').prepend(document.getElementById('avBtn'),document.getElementById('gifBtn'));
 const LAT0=40.2,KX=Math.cos(LAT0*Math.PI/180),CK=0.6,CX0=MOB0?-9.4:-12.4,CY0=MOB0?34.25:35.95,CLON=-18.6,CLAT=27.3;
 const isCan=c=>c===35||c===38;
@@ -288,9 +291,11 @@ const CITIES=[['Madrid',-3.7038,40.4168,1],['Barcelona',2.1686,41.3874,-1],['Val
 // ---- view
 const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
 // portrait phone: the legend band sits on the dock and the zoom buttons on the legend, whatever their heights
-function placeBands(){const lg=document.querySelector('.legend'),zm=document.querySelector('.zoom');lg.style.bottom=(innerHeight-document.querySelector('.dock').getBoundingClientRect().top+6)+'px';
-  zm.style.top=(lg.getBoundingClientRect().top-zm.offsetHeight-10)+'px';}
-if(MOB0&&window.ResizeObserver){const ro=new ResizeObserver(()=>{if(innerWidth<=640)placeBands();});ro.observe(document.querySelector('.dock'));ro.observe(document.querySelector('.legend'));}
+function placeBands(){const lg=document.querySelector('.legend'),zm=document.querySelector('.zoom'),ly=document.querySelector('.layers');
+  // the time control sits at the top (no title on phones), the layer buttons right under it, the tooltip band under those
+  ly.style.top=(document.querySelector('.dock').getBoundingClientRect().bottom+8)+'px';document.getElementById('tip').style.setProperty('top',(ly.getBoundingClientRect().bottom+8)+'px','important');
+  zm.style.top=(lg.getBoundingClientRect().top-zm.offsetHeight-10)+'px';document.getElementById('gifPanel').style.bottom=(innerHeight-lg.getBoundingClientRect().top+8)+'px';}
+if(MOB0&&window.ResizeObserver){const ro=new ResizeObserver(()=>{if(innerWidth<=640)placeBands();});ro.observe(document.querySelector('.dock'));ro.observe(document.querySelector('.legend'));ro.observe(document.querySelector('.layers'));}
 function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
   const mob=W<=640;let top=mob?64:52,bot=mob?170:100;
   // portrait phone: use the space between the layer buttons and the legend strip
