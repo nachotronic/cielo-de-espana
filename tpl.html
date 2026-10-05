@@ -354,8 +354,9 @@ function draw(){ctx.setTransform(DPR,0,0,DPR,0,0);
       for(const z in lv)if(lv[z]===L&&AVZ[z]){ctx.fill(AVZ[z].path,'evenodd');ctx.stroke(AVZ[z].path);cnt[L]++;}}
     $('avN').textContent=cnt[1]+cnt[2]+cnt[3]?[3,2,1].filter(L=>cnt[L]).map(L=>cnt[L]+' '+AVNAME[L]).join(' · '):'ninguno a esta hora';}
   ctx.restore();
-  // live view animates particles on their own canvas; the static streamlines are for GIF frames and reduced motion
-  if(mode==='wind'&&HAS.wind&&(gifRec||reduce))drawArrows();
+  // live view animates particles on their own canvas; the static streamlines are for GIF frames.
+  // Reduced motion (also switched on by some phones' battery saver) still animates, at half speed: the moving wind is the content here
+  if(mode==='wind'&&HAS.wind&&gifRec)drawArrows();
   // ten most populous municipalities (INE padrón), labelled in screen space so text stays crisp at any zoom
   // screen boxes already taken by the title, layer buttons, zoom buttons and legend, so no label hides under them
   const boxes=['.head h1','.search input','.layers','.legend','.zoom'].map(q=>document.querySelector(q)).filter(Boolean).map(el=>{const r=el.getBoundingClientRect();return [r.left-4,r.top-4,r.right+4,r.bottom+4];});
@@ -404,7 +405,7 @@ function windMask(){const key=wc.width+','+wc.height+','+OX+','+OY+','+S;if(key=
   return wMask;}
 function spawn(p){for(let k=0;k<6;k++){p.x=Math.random()*W;p.y=Math.random()*H;const g=fromScreen(p.x,p.y);p.can=g.can;if(windAt(g.lon,g.lat))break;}p.age=Math.random()*60|0;p.max=60+Math.random()*60|0;}
 let wLast=0;
-function windTick(now){wRaf=0;const fr=wLast&&now?Math.min(3,(now-wLast)/16.67):1;wLast=now||0;if(mode!=='wind'||!HAS.wind||reduce||gifRec){wctx.setTransform(1,0,0,1,0,0);wctx.clearRect(0,0,wc.width,wc.height);parts=[];return;}
+function windTick(now){wRaf=0;const fr=wLast&&now?Math.min(3,(now-wLast)/16.67):1;wLast=now||0;if(mode!=='wind'||!HAS.wind||gifRec){wctx.setTransform(1,0,0,1,0,0);wctx.clearRect(0,0,wc.width,wc.height);parts=[];return;}
   if(wc.width!==cv.width||wc.height!==cv.height){wc.width=cv.width;wc.height=cv.height;}
   wctx.setTransform(DPR,0,0,DPR,0,0);const view=OX+','+OY+','+S+','+W+','+H;
   const N=Math.round(Math.min(2200,W*H/650));if(view!==wView||parts.length!==N){wView=view;wctx.clearRect(0,0,W,H);parts=Array.from({length:N},()=>{const p={};spawn(p);return p;});}
@@ -412,7 +413,7 @@ function windTick(now){wRaf=0;const fr=wLast&&now?Math.min(3,(now-wLast)/16.67):
   wctx.globalCompositeOperation='destination-out';wctx.fillStyle=`rgba(0,0,0,${(1-Math.pow(.925,fr)).toFixed(4)})`;wctx.fillRect(0,0,W,H);wctx.globalCompositeOperation='source-over';
   // particles coloured by speed (same breaks as the legend), batched into one path per colour
   const bins=PCOL.map(()=>new Path2D());wctx.lineWidth=1.4;wctx.lineCap='round';
-  const k=(W<=640?.045:.055)*Math.max(1,Math.sqrt(S/S0))*fr;
+  const k=(W<=640?.045:.055)*Math.max(1,Math.sqrt(S/S0))*fr*(reduce?.5:1);
   for(const p of parts){const g=fromScreen(p.x,p.y),w=g.can===p.can&&windAt(g.lon,g.lat);
     if(!w||(p.age+=fr)>p.max){spawn(p);continue;}
     const nx=p.x+w.u*k,ny=p.y-w.v*k,sp=Math.hypot(w.u,w.v);let b=0;while(b<PCOL.length-1&&sp>=PCOL[b+1][0])b++;
