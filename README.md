@@ -1,4 +1,4 @@
-# Cielo de España
+# El Parte — el tiempo, en el mapa
 
 Mapa del tiempo de España: nubes y precipitación, temperatura, lluvia acumulada y viento por horas (últimos 7 días y previsión a 48 h, Open-Meteo), avisos de AEMET y límites municipales del INE.
 

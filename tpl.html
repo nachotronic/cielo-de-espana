@@ -2,9 +2,9 @@
 <html lang="es">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Cielo de España</title>
+<title>El Parte · El tiempo, en el mapa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;800&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* Layout: full-bleed map canvas; title top-left, controls docked bottom as a timeline strip, compact legend bottom-right above it. */
 :root{
@@ -19,6 +19,10 @@ html,body{height:100%;margin:0;overflow:hidden}
 body{background:var(--sea);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .head{position:absolute;left:20px;top:calc(16px + env(safe-area-inset-top,0px));max-width:min(380px,calc(100vw - 40px));pointer-events:none}
+/* logo (from Nacho's el-parte-logo.svg): heavy condensed wordmark, rule with an orange segment, spaced tagline */
+.logo{display:inline-grid;gap:0;text-wrap:nowrap}.logo .lw{font:800 clamp(34px,3.6vw,48px)/.9 var(--display);letter-spacing:-.01em;color:var(--ink)}
+.logo .lb{position:relative;display:block;height:5px;border-radius:3px;background:var(--ink);margin:6px 0 6px}.logo .lb i{position:absolute;left:75%;width:15%;top:0;bottom:0;border-radius:3px;background:var(--accent)}
+.logo .lt{font:600 11px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
 h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,3.4vw,42px);line-height:.95;letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
 .when{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
 .badge{display:inline-block;margin-top:8px;padding:3px 8px;border-radius:4px;background:var(--accent);color:#fff;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
@@ -123,13 +127,13 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   .legend #ticksR span:nth-child(2){display:none}
 }
 /* portrait phones (class set from JS): no title; time control on top, layer buttons under it, legend at the bottom */
-.topdock .head{display:none}.topdock .search{left:12px;right:12px;width:auto}.topdock .search input{font-size:16px;padding:11px 12px 11px 34px;background-position:11px 50%}.topdock #tip .chart{display:none}.topdock .dock{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}.topdock .legend{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.topdock .head{left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));max-width:none}.topdock .logo{grid-template-columns:auto 1fr;align-items:end;column-gap:10px;width:100%}.topdock .logo .lw{font-size:26px}.topdock .logo .lt{grid-row:1;grid-column:2;font-size:9.5px;letter-spacing:.16em;text-align:right;padding-bottom:2px}.topdock .logo .lb{grid-column:1/-1;height:4px;margin:4px 0 0}.topdock .search{left:12px;right:12px;width:auto}.topdock .search input{font-size:16px;padding:11px 12px 11px 34px;background-position:11px 50%}.topdock #tip .chart{display:none}.topdock .dock{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}.topdock .legend{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 [hidden]{display:none!important}
 </style>
 <canvas id="c" aria-label="Mapa de nubes y precipitación de España"></canvas>
 <canvas id="wc" aria-hidden="true" style="pointer-events:none"></canvas>
-<header class="head"><h1>Cielo de España</h1><div class="badge" id="badge" hidden>Datos de ejemplo</div></header>
+<header class="head"><h1 class="logo" aria-label="El Parte. El tiempo, en el mapa"><span class="lw" aria-hidden="true">EL PARTE</span><span class="lb" aria-hidden="true"><i></i></span><span class="lt" aria-hidden="true">El tiempo, en el mapa</span></h1><div class="badge" id="badge" hidden>Datos de ejemplo</div></header>
 <div class="search" role="search"><input id="q" type="search" placeholder="Buscar municipio" autocomplete="off" aria-label="Buscar municipio" aria-controls="qres"><ul id="qres" role="listbox" hidden></ul></div>
 <nav class="layers" aria-label="Capa del mapa">
   <button data-m="cielo" aria-pressed="true"><span class="l">Nubes y lluvia</span><span class="s">Cielo</span></button>
@@ -301,9 +305,9 @@ const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
 // portrait phone: the legend band sits on the dock and the zoom buttons on the legend, whatever their heights
 function placeBands(){const lg=document.querySelector('.legend'),zm=document.querySelector('.zoom'),ly=document.querySelector('.layers');
   // the time control sits at the top (no title on phones), the layer buttons right under it, the tooltip band under those
-  const sr=document.querySelector('.search');sr.style.top=(document.querySelector('.dock').getBoundingClientRect().bottom+8)+'px';ly.style.top=(sr.querySelector('input').getBoundingClientRect().bottom+8)+'px';document.getElementById('tip').style.setProperty('top',(ly.getBoundingClientRect().bottom+8)+'px','important');
+  const dk=document.querySelector('.dock');dk.style.top=(document.querySelector('.head').getBoundingClientRect().bottom+8)+'px';const sr=document.querySelector('.search');sr.style.top=(dk.getBoundingClientRect().bottom+8)+'px';ly.style.top=(sr.querySelector('input').getBoundingClientRect().bottom+8)+'px';document.getElementById('tip').style.setProperty('top',(ly.getBoundingClientRect().bottom+8)+'px','important');
   zm.style.top=(lg.getBoundingClientRect().top-zm.offsetHeight-10)+'px';document.getElementById('gifPanel').style.bottom=(innerHeight-lg.getBoundingClientRect().top+8)+'px';}
-if(MOB0&&window.ResizeObserver){const ro=new ResizeObserver(()=>{if(innerWidth<=640)placeBands();});ro.observe(document.querySelector('.dock'));ro.observe(document.querySelector('.legend'));ro.observe(document.querySelector('.layers'));}
+if(MOB0&&window.ResizeObserver){const ro=new ResizeObserver(()=>{if(innerWidth<=640)placeBands();});ro.observe(document.querySelector('.dock'));ro.observe(document.querySelector('.legend'));ro.observe(document.querySelector('.layers'));ro.observe(document.querySelector('.head'));}
 function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
   const mob=W<=640;let top=mob?64:52,bot=mob?170:100;
   // portrait phone: use the space between the layer buttons and the legend strip
@@ -628,7 +632,7 @@ $('gGo').onclick=async()=>{let a=+$('gFrom').value,b=+$('gTo').value;if(b<a)[a,b
   for(let f=0;f<N;f++){const k=a+(b-a)*f/(N-1);t=k;draw();delays.push(Math.round((f+1)*100/FPS)-Math.round(f*100/FPS));o.drawImage(cv,0,0,cw*DPR,ch*DPR,0,0,ow,oh);
     const lbl=fmtFull.format(new Date(t0+Math.round(k)*WX.step*1000))+(Math.round(k)>nowK()?' · previsión':' · modelo')+(mode==='cielo'?'':' · '+LG[mode][0]+(mode==='acc'?' en '+accWin+' h':'')),fs=Math.max(11,Math.round(ow/48));
     o.font=`600 ${fs}px `+css('--sans');o.textBaseline='top';const tw=o.measureText(lbl).width;o.fillStyle=css('--glass');o.fillRect(8,8,tw+16,fs+12);o.fillStyle=css('--ink');o.fillText(lbl,16,14);
-    o.font=`${Math.round(fs*.75)}px `+css('--sans');o.textAlign='right';o.textBaseline='bottom';o.fillStyle=css('--soft');o.fillText('Cielo de España · datos Open-Meteo',ow-8,oh-6);o.textAlign='left';
+    o.font=`${Math.round(fs*.75)}px `+css('--sans');o.textAlign='right';o.textBaseline='bottom';o.fillStyle=css('--soft');o.fillText('El Parte · datos Open-Meteo',ow-8,oh-6);o.textAlign='left';
     frames.push(o.getImageData(0,0,ow,oh).data);$('gSt').textContent=`Dibujando ${f+1} de ${N}…`;await new Promise(r=>setTimeout(r,0));}
   gifRec=false;windKick();t=keepT;tipPt=keepTip;draw();$('gSt').textContent='Codificando…';await new Promise(r=>setTimeout(r,30));
   const bytes=gifEncode(frames,ow,oh,delays),blob=new Blob([bytes],{type:'image/gif'});
