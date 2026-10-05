@@ -34,7 +34,7 @@ body{display:grid;place-items:center;padding:12px}
 .note{position:absolute;left:51cqw;right:4cqw;top:121cqw;font:400 2.5cqw var(--sans);color:var(--soft);z-index:1}
 /* presenter: framed portrait; one image per mouth shape (Nacho's sheet), swapped in time with the text */
 .host{position:absolute;left:4cqw;bottom:5cqw;width:44cqw;aspect-ratio:330/441;border-radius:3cqw;overflow:hidden;background:#d6d7d8;box-shadow:0 2cqw 6cqw rgba(0,0,0,.18);z-index:2;animation:breathe 4.5s ease-in-out infinite;transform-origin:50% 100%}
-.host img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}.host img.on{opacity:1}
+.host img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 45ms linear}.host img.eye{transition:none}.host img.on{opacity:1}.host img.eye{z-index:1}
 @keyframes breathe{50%{transform:scale(1.01)}}
 @media (prefers-reduced-motion:reduce){.host,.pin.on{animation:none}.map img{transition:opacity .6s}}
 </style>
@@ -42,7 +42,7 @@ body{display:grid;place-items:center;padding:12px}
   <div class="top"><div class="lw">EL PARTE</div><div class="lb"><i></i></div><div class="lt"><span>El tiempo, en el mapa</span><span id="day"></span></div></div>
   <div class="map" id="map"><img id="m1" src="map_cielo.jpg" alt=""><img id="m2" class="off" src="map_temp.jpg" alt=""><div class="tag" id="tag">Nubes y lluvia</div><div class="pin" id="pin"></div></div>
   <div class="note">Muestra con datos de un día anterior. En la versión real el guion y el mapa salen de la previsión del momento.</div>
-  <div class="host" id="host" role="img" aria-label="Presentadora de El Parte"><img data-v="rest" src="v_rest.webp" alt="" class="on"><img data-v="a" src="v_a.webp" alt=""><img data-v="e" src="v_e.webp" alt=""><img data-v="i" src="v_i.webp" alt=""><img data-v="o" src="v_o.webp" alt=""><img data-v="u" src="v_u.webp" alt=""><img data-v="mbp" src="v_mbp.webp" alt=""><img data-v="fv" src="v_fv.webp" alt=""></div>
+  <div class="host" id="host" role="img" aria-label="Presentadora de El Parte"><img data-v="rest" src="v_rest.webp" alt="" class="on"><img data-v="a" src="v_a.webp" alt=""><img data-v="e" src="v_e.webp" alt=""><img data-v="i" src="v_i.webp" alt=""><img data-v="o" src="v_o.webp" alt=""><img data-v="u" src="v_u.webp" alt=""><img data-v="mbp" src="v_mbp.webp" alt=""><img data-v="fv" src="v_fv.webp" alt=""><img data-v="soft" src="v_soft.webp" alt=""><img data-v="mid" src="v_mid.webp" alt=""><img data-v="round" src="v_round.webp" alt=""><img class="eye" id="eHalf" src="eye_half.webp" alt=""><img class="eye" id="eClosed" src="eye_closed.webp" alt=""></div>
   <div class="sub"><p id="sub"></p></div>
   <div class="bar"><i id="prog"></i></div>
   <button class="go" id="go" aria-label="Reproducir el parte"><span>▶</span><small>Toca para ver el parte</small></button>
@@ -68,17 +68,29 @@ function frameTo(s){const W=map.clientWidth,H=map.clientHeight,k=W/1000*s.z;let 
   host.classList.toggle('point',!!p);}
 // lip sync: each letter becomes a mouth shape with a duration; the timeline runs on its own and jumps to
 // the word the voice is on whenever the browser reports a word boundary
-const VIS={};host.querySelectorAll('img').forEach(im=>VIS[im.dataset.v]=im);let cur='rest';
+const VIS={};host.querySelectorAll('img[data-v]').forEach(im=>VIS[im.dataset.v]=im);let cur='rest';
 const show=v=>{if(v===cur)return;VIS[cur].classList.remove('on');VIS[v].classList.add('on');cur=v;};
-function timeline(text){const t=text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');const seq=[],at=[];let ms=0;
+// letters → mouth shapes; plain consonants use the soft opening, and wide vowels get a half-open step on the
+// way in and out (rounded for o/u) so the mouth doesn't jump straight from closed to wide
+function timeline(text){const t=text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');const raw=[],at=[];let ms=0;
   for(let i=0;i<t.length;i++){const c=t[i];at[i]=ms;let v,d;
     if('aeiou'.includes(c)){v=c;d=95;}else if('mbp'.includes(c)){v='mbp';d=70;}else if('fv'.includes(c)){v='fv';d=70;}
-    else if(/[sczxj]/.test(c)){v='i';d=60;}else if(/[a-z]/.test(c)){v='e';d=50;}else if(/[,;:]/.test(c)){v='rest';d=260;}else if(/[.!?]/.test(c)){v='rest';d=420;}else{v='rest';d=35;}
-    seq.push([ms,v]);ms+=d;}at[t.length]=ms;return {seq,at,len:ms};}
+    else if(/[sczxj]/.test(c)){v='mid';d=60;}else if(/[a-z]/.test(c)){v='soft';d=50;}else if(/[,;:]/.test(c)){v='rest';d=260;}else if(/[.!?]/.test(c)){v='rest';d=420;}else{v='soft';d=35;}
+    raw.push([ms,v,d]);ms+=d;}at[t.length]=ms;
+  const CLOSED=new Set(['rest','mbp','fv']),step=v=>v==='o'||v==='u'?'round':'mid',seq=[];
+  raw.forEach(([m,v,d],i)=>{const pv=raw[i-1]?.[1]??'rest',nv=raw[i+1]?.[1]??'rest';
+    if('aeiou'.includes(v)&&v!=='i'){let a=m,b=m+d;if(CLOSED.has(pv)){seq.push([a,step(v)]);a+=32;}seq.push([a,v]);if(CLOSED.has(nv)&&b-a>50)seq.push([b-28,step(v)]);}
+    else seq.push([m,v]);});
+  return {seq,at,len:ms};}
 let lip=null,lipRaf=0;
 function lipRun(text,rate){lip={...timeline(text),t0:performance.now(),rate};cancelAnimationFrame(lipRaf);
   const tick=()=>{if(!lip)return;const el=(performance.now()-lip.t0)*lip.rate;let v='rest';for(const [m,x] of lip.seq){if(m>el)break;v=x;}show(el>lip.len?'rest':v);lipRaf=requestAnimationFrame(tick);};tick();}
 function lipSync(ci){if(lip&&lip.at[ci]!=null)lip.t0=performance.now()-lip.at[ci]/lip.rate;}
+// blinks: eye patches from the second sheet (aligned to the first) laid over whatever mouth is showing
+const eH=$('eHalf'),eC=$('eClosed'),wait=ms=>new Promise(r=>setTimeout(r,ms));
+(async function blink(){for(;;){await wait(2200+Math.random()*3800);if(document.hidden)continue;
+  eH.classList.add('on');await wait(55);eC.classList.add('on');await wait(95);eC.classList.remove('on');await wait(55);eH.classList.remove('on');
+  if(Math.random()<.15){await wait(180);eH.classList.add('on');eC.classList.add('on');await wait(90);eC.classList.remove('on');eH.classList.remove('on');}}})();
 function lipStop(){lip=null;cancelAnimationFrame(lipRaf);show('rest');}
 const synth=window.speechSynthesis;let voice=null;
 function pickVoice(){const vs=synth?synth.getVoices():[];voice=vs.find(v=>/^es[-_]ES/i.test(v.lang))||vs.find(v=>/^es/i.test(v.lang))||null;}
