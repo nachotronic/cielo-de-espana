@@ -34,7 +34,8 @@ body{display:grid;place-items:center;padding:12px}
 .note{position:absolute;left:51cqw;right:4cqw;top:121cqw;font:400 2.5cqw var(--sans);color:var(--soft);z-index:1}
 /* presenter: framed portrait; one image per mouth shape (Nacho's sheet), swapped in time with the text */
 .host{position:absolute;left:4cqw;bottom:5cqw;width:44cqw;aspect-ratio:330/441;border-radius:3cqw;overflow:hidden;background:#d6d7d8;box-shadow:0 2cqw 6cqw rgba(0,0,0,.18);z-index:2;animation:breathe 4.5s ease-in-out infinite;transform-origin:50% 100%}
-.host img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 45ms linear}.host img.eye{transition:none}.host img.on{opacity:1}.host img.eye{z-index:1}
+/* the resting face is always underneath, so a fading mouth never shows the grey background through */
+.host img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}.host img.on{opacity:1;transition:opacity 110ms ease-out}.host img[data-v=rest]{opacity:1}.host img.eye{z-index:100000;transition:none}
 @keyframes breathe{50%{transform:scale(1.01)}}
 @media (prefers-reduced-motion:reduce){.host,.pin.on{animation:none}.map img{transition:opacity .6s}}
 </style>
@@ -69,18 +70,19 @@ function frameTo(s){const W=map.clientWidth,H=map.clientHeight,k=W/1000*s.z;let 
 // lip sync: each letter becomes a mouth shape with a duration; the timeline runs on its own and jumps to
 // the word the voice is on whenever the browser reports a word boundary
 const VIS={};host.querySelectorAll('img[data-v]').forEach(im=>VIS[im.dataset.v]=im);let cur='rest';
-const show=v=>{if(v===cur)return;VIS[cur].classList.remove('on');VIS[v].classList.add('on');cur=v;};
-// letters → mouth shapes; plain consonants use the soft opening, and wide vowels get a half-open step on the
-// way in and out (rounded for o/u) so the mouth doesn't jump straight from closed to wide
-function timeline(text){const t=text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');const raw=[],at=[];let ms=0;
-  for(let i=0;i<t.length;i++){const c=t[i];at[i]=ms;let v,d;
-    if('aeiou'.includes(c)){v=c;d=95;}else if('mbp'.includes(c)){v='mbp';d=70;}else if('fv'.includes(c)){v='fv';d=70;}
-    else if(/[sczxj]/.test(c)){v='mid';d=60;}else if(/[a-z]/.test(c)){v='soft';d=50;}else if(/[,;:]/.test(c)){v='rest';d=260;}else if(/[.!?]/.test(c)){v='rest';d=420;}else{v='soft';d=35;}
-    raw.push([ms,v,d]);ms+=d;}at[t.length]=ms;
-  const CLOSED=new Set(['rest','mbp','fv']),step=v=>v==='o'||v==='u'?'round':'mid',seq=[];
-  raw.forEach(([m,v,d],i)=>{const pv=raw[i-1]?.[1]??'rest',nv=raw[i+1]?.[1]??'rest';
-    if('aeiou'.includes(v)&&v!=='i'){let a=m,b=m+d;if(CLOSED.has(pv)){seq.push([a,step(v)]);a+=32;}seq.push([a,v]);if(CLOSED.has(nv)&&b-a>50)seq.push([b-28,step(v)]);}
-    else seq.push([m,v]);});
+let zc=1;const show=v=>{if(v===cur)return;const pv=VIS[cur],nx=VIS[v];clearTimeout(nx._t);nx.style.zIndex=++zc;nx.classList.add('on');cur=v;
+  // the old mouth stays put under the new one until the fade-in is over
+  pv._t=setTimeout(()=>{if(cur!==pv.dataset.v)pv.classList.remove('on');},140);};
+// one mouth shape per syllable (its vowel), moderate openings, lips closing for m/b/p, rest at pauses;
+// shapes shorter than ~130 ms are merged into the previous one so the mouth moves at a natural pace
+function timeline(text){const t=text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');const raw=[],at=[];let ms=0,nv=0;
+  for(let i=0;i<t.length;i++){const c=t[i];at[i]=ms;let v=null,d;
+    if('aeiou'.includes(c)){nv++;v=c==='a'?(nv%3?'mid':'a'):c==='o'||c==='u'?(nv%4?'round':'o'):'soft';d=95;}
+    else if('mbp'.includes(c)){v='mbp';d=70;}else if(/[a-z]/.test(c))d=55;
+    else if(/[,;:]/.test(c)){v='rest';d=260;}else if(/[.!?]/.test(c)){v='rest';d=420;}else d=35;
+    if(v)raw.push([ms,v]);ms+=d;}at[t.length]=ms;
+  const seq=[];for(const [m,v] of raw){const last=seq[seq.length-1];if(last&&last[1]===v)continue;
+    if(last&&v!=='rest'&&last[1]!=='rest'&&m-last[0]<130)continue;seq.push([m,v]);}
   return {seq,at,len:ms};}
 let lip=null,lipRaf=0;
 function lipRun(text,rate){lip={...timeline(text),t0:performance.now(),rate};cancelAnimationFrame(lipRaf);
