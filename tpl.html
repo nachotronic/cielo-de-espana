@@ -48,6 +48,13 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 .gifpanel .go{font:500 13px var(--sans);background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px;cursor:pointer}.gifpanel .go:disabled{opacity:.6;cursor:progress}
 .gifpanel img{max-width:100%;border-radius:6px;border:1px solid var(--line)}
 .gifpanel .st{color:var(--soft);font-size:11px;min-height:1em}
+/* municipality search: under the title on desktop, its own row between the time control and the layers on phones */
+.search{position:absolute;left:20px;top:calc(76px + env(safe-area-inset-top,0px));width:240px;z-index:15}
+.search input{width:100%;box-sizing:border-box;font:14px var(--sans);color:var(--ink);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;padding:8px 10px 8px 30px;outline:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23778' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5L21 21'/%3E%3C/svg%3E");background-repeat:no-repeat;background-size:15px;background-position:9px 50%}
+.search input:focus{border-color:var(--accent)}
+.search ul{list-style:none;margin:4px 0 0;padding:4px;background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.16);max-height:300px;overflow:auto}
+.search li{padding:7px 9px;border-radius:5px;cursor:pointer;font-size:13.5px;color:var(--ink)}.search li small{color:var(--soft);margin-left:6px;font-size:11.5px}.search li[aria-selected=true],.search li:hover{background:rgba(0,0,0,.07)}
 #tip{position:absolute;z-index:20;pointer-events:none;display:none;background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:12px;padding:11px 13px 10px;font-size:12px;line-height:1.4;width:250px;box-shadow:0 8px 28px rgba(0,0,0,.16)}
 #tip .hd b{font-family:var(--display);font-weight:600;font-size:18px;line-height:1.1;display:block;overflow-wrap:anywhere}
 #tip .hd small{display:block;color:var(--soft);font-size:11px;margin-top:2px}
@@ -73,7 +80,7 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
 #tip .wk .wp{font:10.5px var(--mono);color:#3c8cdc}#tip .wk .wp.z{opacity:.45}#tip .wk .ww{font:10.5px var(--mono);color:var(--soft)}
 #tip .wk .ic{fill:#c3ccd5;stroke:#8a96a3;stroke-width:1}#tip .wk .is{fill:#f5b800}#tip .wk .ir{stroke:#f5b800;stroke-width:1.8;stroke-linecap:round;fill:none}
 #tip .wk .ig{stroke:#9aa5b1;stroke-width:1.8;stroke-linecap:round;fill:none}#tip .wk .id{stroke:#3c8cdc;stroke-width:1.8;stroke-linecap:round;fill:none}
-#tip .wk .iw{stroke:#7fa7cf;stroke-width:2.6;stroke-linecap:round;fill:none}#tip .wk .it{stroke:#e8a400;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;fill:none}
+#tip .wk .iw{stroke:#7fa7cf;stroke-width:2.6;stroke-linecap:round;fill:none}#tip .wk .im{fill:#c9cfe0;stroke:#8a93ad;stroke-width:1}#tip .wk .it{stroke:#e8a400;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;fill:none}
 #tip .ex{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:11.5px}#tip .ex span:first-child{color:var(--soft)}#tip .ex span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
 #tip .av{margin-top:8px;padding-top:7px;border-top:1px solid var(--line);display:grid;gap:4px;font-size:11.5px}#tip .av div{display:flex;gap:6px;align-items:baseline}#tip .av i{flex:none;width:9px;height:9px;border-radius:2px;transform:translateY(1px)}
 .note{font-size:9.5px;line-height:1.4;color:var(--soft)}
@@ -116,13 +123,14 @@ input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
   .legend #ticksR span:nth-child(2){display:none}
 }
 /* portrait phones (class set from JS): no title; time control on top, layer buttons under it, legend at the bottom */
-.topdock .head{display:none}.topdock .dock{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}.topdock .legend{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.topdock .head{display:none}.topdock .search{left:12px;right:12px;width:auto}.topdock .search input{font-size:16px;padding:11px 12px 11px 34px;background-position:11px 50%}.topdock #tip .chart{display:none}.topdock .dock{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto}.topdock .legend{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 [hidden]{display:none!important}
 </style>
 <canvas id="c" aria-label="Mapa de nubes y precipitación de España"></canvas>
 <canvas id="wc" aria-hidden="true" style="pointer-events:none"></canvas>
 <header class="head"><h1>Cielo de España</h1><div class="badge" id="badge" hidden>Datos de ejemplo</div></header>
+<div class="search" role="search"><input id="q" type="search" placeholder="Buscar municipio" autocomplete="off" aria-label="Buscar municipio" aria-controls="qres"><ul id="qres" role="listbox" hidden></ul></div>
 <nav class="layers" aria-label="Capa del mapa">
   <button data-m="cielo" aria-pressed="true"><span class="l">Nubes y lluvia</span><span class="s">Cielo</span></button>
   <button data-m="temp" aria-pressed="false"><span class="l">Temperatura</span><span class="s">Temp.</span></button>
@@ -293,12 +301,13 @@ const cv=$('c'),ctx=cv.getContext('2d');let W,H,DPR,S,OX,OY,S0;
 // portrait phone: the legend band sits on the dock and the zoom buttons on the legend, whatever their heights
 function placeBands(){const lg=document.querySelector('.legend'),zm=document.querySelector('.zoom'),ly=document.querySelector('.layers');
   // the time control sits at the top (no title on phones), the layer buttons right under it, the tooltip band under those
-  ly.style.top=(document.querySelector('.dock').getBoundingClientRect().bottom+8)+'px';document.getElementById('tip').style.setProperty('top',(ly.getBoundingClientRect().bottom+8)+'px','important');
+  const sr=document.querySelector('.search');sr.style.top=(document.querySelector('.dock').getBoundingClientRect().bottom+8)+'px';ly.style.top=(sr.querySelector('input').getBoundingClientRect().bottom+8)+'px';document.getElementById('tip').style.setProperty('top',(ly.getBoundingClientRect().bottom+8)+'px','important');
   zm.style.top=(lg.getBoundingClientRect().top-zm.offsetHeight-10)+'px';document.getElementById('gifPanel').style.bottom=(innerHeight-lg.getBoundingClientRect().top+8)+'px';}
 if(MOB0&&window.ResizeObserver){const ro=new ResizeObserver(()=>{if(innerWidth<=640)placeBands();});ro.observe(document.querySelector('.dock'));ro.observe(document.querySelector('.legend'));ro.observe(document.querySelector('.layers'));}
 function fit(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;
   const mob=W<=640;let top=mob?64:52,bot=mob?170:100;
   // portrait phone: use the space between the layer buttons and the legend strip
+  if(!MOB0)document.querySelector('.search').style.top=(document.querySelector('.head').getBoundingClientRect().bottom+10)+'px';
   if(MOB0&&mob){placeBands();const lr=document.querySelector('.layers').getBoundingClientRect(),gr=document.querySelector('.legend').getBoundingClientRect();top=lr.bottom+8;bot=H-gr.top+8;}const sw=(W-16)/(BB[2]-BB[0]),sh=(H-top-bot)/(BB[3]-BB[1]);S=Math.min(sw,sh);
   S0=S;OX=(W-(BB[2]-BB[0])*S)/2-BB[0]*S+(mob?0:Math.min(40,(W-16-(BB[2]-BB[0])*S)/2));OY=top+((H-top-bot)-(BB[3]-BB[1])*S)/2+BB[3]*S;draw();}
 const toScreen=(X,Y)=>[OX+X*S,OY+Y*S];
@@ -349,7 +358,7 @@ function draw(){ctx.setTransform(DPR,0,0,DPR,0,0);
   if(mode==='wind'&&HAS.wind&&(gifRec||reduce))drawArrows();
   // ten most populous municipalities (INE padrón), labelled in screen space so text stays crisp at any zoom
   // screen boxes already taken by the title, layer buttons, zoom buttons and legend, so no label hides under them
-  const boxes=['.head h1','.layers','.legend','.zoom'].map(q=>document.querySelector(q)).filter(Boolean).map(el=>{const r=el.getBoundingClientRect();return [r.left-4,r.top-4,r.right+4,r.bottom+4];});
+  const boxes=['.head h1','.search input','.layers','.legend','.zoom'].map(q=>document.querySelector(q)).filter(Boolean).map(el=>{const r=el.getBoundingClientRect();return [r.left-4,r.top-4,r.right+4,r.bottom+4];});
   const munVals=pv&&MUN&&S/S0>=2.5;
   if(pv&&!munVals){const fz=W<=640?9.5:Math.min(13,10+S/S0*1.2);ctx.font=`600 ${fz}px `+css('--mono');ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
     for(const [p,v] of pv){if(v==null)continue;const [X,Y]=pj(p.lab[0],p.lab[1],p.can),[sx,sy]=toScreen(X,-Y);
@@ -512,6 +521,32 @@ function tipWeek(lon,lat){if(!WX.dstart)return '';let g=null,i=0,j=0;
     const k=e*n+j*g.nx+i,ic=wmo(g.day.wc[k]),pr=g.day.pr[k]/2,lab=ds===today?'Hoy':new Intl.DateTimeFormat('es-ES',{weekday:'short',timeZone:'UTC'}).format(dt).replace('.','');
     cols+=`<div><span class="dn">${lab}</span><svg viewBox="0 0 24 24" role="img" aria-label="${WMO_TXT[ic]}"><title>${WMO_TXT[ic]}</title>${ICON[ic]}</svg><span class="tt"><b>${Math.round(g.day.tx[k]/3-40)}°</b><i>${Math.round(g.day.tn[k]/3-40)}°</i></span><span class="wp${pr>=0.5?'':' z'}">${pr>=0.5?(pr<10?pr.toFixed(1).replace('.',',').replace(',0',''):Math.round(pr)):'0'}</span><span class="ww">${g.day.ws[k]}</span></div>`;}
   return cols?`<div class="week"><div class="ch"><span>Próximos días</span><span><b class="cp">lluvia mm</b><span class="vw"> · viento km/h</span></span></div><div class="wk">${cols}</div></div>`:'';}
+// ---- next hours in 3-hour steps: sky icon from cloud/rain (moon after dark), temperature, rain in the 3 h, wind
+ICON.moon='<path d="M15.5 3.5a8.5 8.5 0 1 0 5 13.6A7 7 0 0 1 15.5 3.5z" class="im"/>';
+ICON.pmoon='<path d="M10.5 2.5a6 6 0 1 0 4 9.5 5 5 0 0 1-4-9.5z" class="im"/><g transform="translate(2.5 2.5) scale(.9)">'+CLD+'</g>';
+WMO_TXT.moon='Despejado';WMO_TXT.pmoon='Poco nuboso';
+function sunUp(lon,lat,ms){const d=new Date(ms),doy=(ms-Date.UTC(d.getUTCFullYear(),0,0))/864e5,dec=23.44*Math.sin(2*Math.PI*(284+doy)/365)*Math.PI/180,
+  ha=((d.getUTCHours()+d.getUTCMinutes()/60-12)*15+lon)*Math.PI/180,la=lat*Math.PI/180;return Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(ha)>-0.01;}
+function tipHours(lon,lat){const k0=Math.max(NOW,Math.min(WX.T-1,nowK()));let cols='';
+  for(let s=0;s<8;s++){const k=k0+s*3;if(k>WX.T-1)break;const v=valueAt(lon,lat,k);if(!v)return '';let pr=0;for(let q=k;q<Math.min(WX.T,k+3);q++)pr+=valueAt(lon,lat,q).rain;
+    const ms=t0+k*WX.step*1000,day=sunUp(lon,lat,ms),ic=v.rain>=0.1||pr>=0.3?(v.temp!=null&&v.temp<=1?'snow':'rain'):v.cloud<25?(day?'sun':'moon'):v.cloud<65?(day?'part':'pmoon'):'cloud';
+    cols+=`<div><span class="dn">${s?fmtHr.format(new Date(ms))+'h':'Ahora'}</span><svg viewBox="0 0 24 24" role="img" aria-label="${WMO_TXT[ic]}"><title>${WMO_TXT[ic]}</title>${ICON[ic]}</svg>${v.temp!=null?`<b>${Math.round(v.temp)}°</b>`:''}<span class="wp${pr>=0.1?'':' z'}">${pr>=0.1?(pr<10?pr.toFixed(1).replace('.',','):Math.round(pr)):'0'}</span>${v.ws!=null?`<span class="ww">${Math.round(v.ws)}</span>`:''}</div>`;}
+  return cols?`<div class="week"><div class="ch"><span>Próximas horas</span><span><b class="cp">lluvia mm</b><span class="vw"> · viento km/h</span></span></div><div class="wk">${cols}</div></div>`:'';}
+// ---- municipality search: accent-blind prefix matches first (larger towns first, labs are ranked), then substring matches
+const fold=x=>x.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();let qHits=[],qSel=0,qIdx=null;
+function qFind(q){q=fold(q.trim());if(q.length<2||!MUN)return [];qIdx??=MUN.labs.map(l=>fold(l[0]));const a=[],b=[];
+  for(let i=0;i<qIdx.length&&a.length<8;i++){const n=qIdx[i];if(n.startsWith(q)||n.includes(' '+q)||n.includes('/'+q))a.push(i);else if(b.length<8&&n.includes(q))b.push(i);}return a.concat(b).slice(0,8);}
+function qShow(){const ul=$('qres');ul.hidden=!qHits.length;$('q').setAttribute('aria-expanded',!!qHits.length);
+  ul.innerHTML=qHits.map((i,n)=>{const [nm,lon,lat]=MUN.labs[i],pv=provAt(lon,lat,isCanPt(lon,lat));return `<li role="option" data-i="${i}" aria-selected="${n===qSel}">${nm}${pv&&pv!==nm?`<small>${pv}</small>`:''}</li>`;}).join('');}
+function qGo(i){const [nm,lon,lat]=MUN.labs[i];$('q').value=nm;qHits=[];qShow();$('q').blur();
+  const [X,Y]=pj(lon,lat,isCanPt(lon,lat)),z=Math.max(S/S0,10),k=z*S0/S;S*=k;const cx=W/2,top=W<=640?(document.querySelector('.layers').getBoundingClientRect().bottom):0,cy=W<=640?top+(document.querySelector('.legend').getBoundingClientRect().top-top)*0.62:H/2;
+  OX=cx-X*S;OY=cy+Y*S;clampView();draw();const [sx,sy]=toScreen(X,-Y);tipPt={x:sx,y:sy};refreshTip();}
+$('q').addEventListener('input',e=>{qHits=qFind(e.target.value);qSel=0;qShow();});
+$('q').addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){if(!qHits.length)return;e.preventDefault();qSel=(qSel+(e.key==='ArrowDown'?1:qHits.length-1))%qHits.length;qShow();}
+  else if(e.key==='Enter'&&qHits.length){e.preventDefault();qGo(qHits[qSel]);}else if(e.key==='Escape'){qHits=[];qShow();}});
+$('qres').addEventListener('pointerdown',e=>{const li=e.target.closest('li');if(li){e.preventDefault();qGo(+li.dataset.i);}});
+$('q').addEventListener('blur',()=>setTimeout(()=>{qHits=[];qShow();},150));
+if(!MUN)document.querySelector('.search').hidden=true;
 function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromScreen(tipPt.x,tipPt.y);const v=valueAt(g.lon,g.lat,t);if(!v){tip.style.display='none';return;}
   const name=provAt(g.lon,g.lat,g.can),pp=name&&provPaths.find(p=>GEO.names[p.c]===name&&p.can===g.can),pm=pp&&PROV_MODES[mode]?provMean(pp,PROV_MODES[mode])??0:0;const mm=v.rain;
   const mn=munAt(g.lon,g.lat);
@@ -522,7 +557,7 @@ function refreshTip(){if(!tipPt){tip.style.display='none';return;}const g=fromSc
     `<div class="hero">${v.temp!=null?`<div class="tv">${Math.round(v.temp)}<sup>°C</sup></div>`:''}<div class="sky"><strong>${sky}</strong>${rainTxt}</div></div>`+
     `<div class="stats"><div><span>Nubes</span><em>${Math.round(v.cloud)} %</em></div><div><span>Precip.</span><em>${mm<0.1?'0':f1(mm)} mm/h</em></div>${v.ws!=null?`<div><span>Viento</span><em>${Math.round(v.ws)} km/h${arrow}</em></div>`:''}</div>`+
     (mode==='acc'?`<div class="ex"><span>Acumulada ${accWin} h</span><span>${v.acc<0.1?'0':f1(v.acc)} mm</span></div>`:'')+
-    tipChart(g.lon,g.lat)+tipWeek(g.lon,g.lat)+`<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
+    tipChart(g.lon,g.lat)+tipHours(g.lon,g.lat)+tipWeek(g.lon,g.lat)+`<div class="est">Estimación del modelo en este punto · rejilla de ${dec(WX.grids[0].d)}°</div>`+(PROV_MODES[mode]&&pp?`<div class="ex"><span>Media estimada provincia</span><span>${mode==='temp'?f1(pm)+' °C':f1(pm)+' mm'}</span></div>`:'');
   if(showAv){const ws=avAt(g.lon,g.lat,g.can),seen=new Set();if(ws.length)tip.innerHTML+=`<div class="av"><div style="color:var(--soft)">${ws[0].zn}</div>${ws.filter(w=>{const k=w.ph+w.d;if(seen.has(k))return false;seen.add(k);return true;}).map(w=>`<div><i style="background:rgb(${AVCOL[w.lv]})"></i><span><b style="display:inline;font:500 12px var(--sans);text-transform:none;letter-spacing:0">${w.ph} · ${AVNAME[w.lv]}</b> ${w.d} Hasta ${fmtDay.format(new Date(w.b+1000))===fmtDay.format(new Date(hourMs()))?'las '+fmtH.format(new Date(w.b+1000)):'el '+fmtDay.format(new Date(w.b+1000))+', '+fmtH.format(new Date(w.b+1000))}.</span></div>`).join('')}</div>`;}
   tip.style.display=W>640?'block':'grid';if(W>640){const w=tip.offsetWidth,h=tip.offsetHeight,bot=document.querySelector('.dock').getBoundingClientRect().top-8;
     const x=tipPt.x+16+w>W-10?tipPt.x-16-w:tipPt.x+16,y=tipPt.y+16+h>bot?tipPt.y-16-h:tipPt.y+16;
