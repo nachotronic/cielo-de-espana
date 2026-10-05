@@ -37,6 +37,7 @@ jobs:
           node build.js
           mkdir -p _site
           cp cielo.html _site/index.html
+          cp -r demo _site/demo
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

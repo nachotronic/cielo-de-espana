@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>El Parte · muestra de píldora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Sample of the video "píldora": a drawn presenter reads a short forecast over the map.
+   Voice comes from the browser (speechSynthesis), so it differs per device; the real clip would use a fixed voice. */
+:root{--ink:#202d35;--accent:#ee5a2b;--soft:#5e717a;--sea:#8cc4c6;--paper:#f3f1ea;--display:"Barlow Condensed","Arial Narrow",sans-serif;--sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2328;color:var(--ink);font-family:var(--sans)}
+body{display:grid;place-items:center;padding:12px}
+.frame{position:relative;width:min(100%,calc((100dvh - 24px)*9/16));aspect-ratio:9/16;background:var(--paper);border-radius:14px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.4);container-type:inline-size}
+.top{position:absolute;inset:0 0 auto 0;padding:5cqw 6cqw 0;z-index:3}
+.lw{font:800 11cqw/.9 var(--display);letter-spacing:-.01em}
+.lb{position:relative;height:1.3cqw;border-radius:1cqw;background:var(--ink);margin:1.6cqw 0}.lb i{position:absolute;left:75%;width:15%;top:0;bottom:0;border-radius:1cqw;background:var(--accent)}
+.lt{display:flex;justify-content:space-between;font:600 2.6cqw var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
+.map{position:absolute;left:4cqw;right:4cqw;top:27cqw;height:92cqw;border-radius:3cqw;overflow:hidden;background:var(--sea);z-index:1}
+.map img{position:absolute;left:0;top:0;width:100%;height:auto;transform-origin:0 0;transition:transform 1.6s cubic-bezier(.45,0,.2,1),opacity .6s}
+.map img.off{opacity:0}
+.tag{position:absolute;left:3cqw;top:3cqw;padding:1cqw 2.4cqw;border-radius:1.5cqw;background:var(--ink);color:#fff;font:600 3cqw var(--sans);z-index:2}
+.pin{position:absolute;width:5cqw;height:5cqw;margin:-2.5cqw 0 0 -2.5cqw;border-radius:50%;border:.9cqw solid var(--accent);z-index:2;opacity:0;transition:opacity .4s}
+.pin.on{opacity:1;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.35)}}
+.host{position:absolute;left:0;bottom:0;width:58cqw;z-index:2}
+.sub{position:absolute;right:4cqw;bottom:16cqw;left:44cqw;min-height:22cqw;display:flex;align-items:flex-end;z-index:3}
+.sub p{margin:0;padding:2.4cqw 3cqw;border-radius:2.4cqw;background:rgba(32,45,53,.92);color:#fff;font:600 3.7cqw/1.35 var(--sans)}
+.sub p:empty{display:none}
+.bar{position:absolute;left:0;right:0;bottom:0;height:1.4cqw;background:rgba(32,45,53,.15);z-index:4}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s linear}
+.go{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(243,241,234,.55);border:0;cursor:pointer;font:inherit}
+.go[hidden]{display:none}.go span{display:grid;place-items:center;width:22cqw;height:22cqw;border-radius:50%;background:var(--ink);color:#fff;font-size:8cqw;padding-left:1.5cqw;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.go small{position:absolute;bottom:42%;transform:translateY(16cqw);font:600 3.4cqw var(--sans);color:var(--ink)}
+.note{position:absolute;left:46cqw;right:4cqw;top:121cqw;font:400 2.5cqw var(--sans);color:var(--soft);z-index:1}
+/* presenter: blink and idle sway; mouth and arm are driven from JS */
+#eyes{animation:blink 4.2s infinite}@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+#eyes{transform-origin:100px 92px}#body{animation:sway 5s ease-in-out infinite;transform-origin:100px 260px}@keyframes sway{50%{transform:rotate(-1.2deg)}}
+#arm{transform-origin:150px 168px;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+@media (prefers-reduced-motion:reduce){#body,.pin.on{animation:none}.map img{transition:opacity .6s}}
+</style>
+<div class="frame">
+  <div class="top"><div class="lw">EL PARTE</div><div class="lb"><i></i></div><div class="lt"><span>El tiempo, en el mapa</span><span id="day"></span></div></div>
+  <div class="map" id="map"><img id="m1" src="map_cielo.jpg" alt=""><img id="m2" class="off" src="map_temp.jpg" alt=""><div class="tag" id="tag">Nubes y lluvia</div><div class="pin" id="pin"></div></div>
+  <div class="note">Muestra con datos de un día anterior. En la versión real el guion y el mapa salen de la previsión del momento.</div>
+  <svg class="host" viewBox="0 0 200 260" aria-hidden="true">
+    <g id="body">
+      <path d="M38 260c4-52 26-82 62-86 36 4 58 34 62 86z" fill="#202d35"/>
+      <path d="M86 176l14 22 14-22z" fill="#f3f1ea"/><path d="M94 182l6 34 6-34-6-6z" fill="#ee5a2b"/>
+      <g id="arm"><path d="M150 168c14 4 22 14 26 30l-12 6c-4-12-10-20-20-24z" fill="#202d35"/><circle cx="171" cy="204" r="8" fill="#f2c6a0"/></g>
+      <rect x="90" y="148" width="20" height="24" rx="6" fill="#e6b38e"/>
+      <ellipse cx="100" cy="104" rx="38" ry="46" fill="#f2c6a0"/>
+      <path d="M62 98c-2-34 18-52 40-52 24 0 40 16 38 48-6-14-14-22-26-26-14 10-32 14-52 30z" fill="#3a2a22"/>
+      <ellipse cx="62" cy="108" rx="6" ry="9" fill="#e6b38e"/><ellipse cx="138" cy="108" rx="6" ry="9" fill="#e6b38e"/>
+      <g id="eyes" fill="#202d35"><ellipse cx="85" cy="100" rx="4.2" ry="5"/><ellipse cx="115" cy="100" rx="4.2" ry="5"/></g>
+      <path d="M77 89q8-5 16 0M107 89q8-5 16 0" stroke="#3a2a22" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M100 104q-3 9 2 11" stroke="#d99d78" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <ellipse cx="78" cy="118" rx="6" ry="3.5" fill="#ee9b80" opacity=".45"/><ellipse cx="122" cy="118" rx="6" ry="3.5" fill="#ee9b80" opacity=".45"/>
+      <g id="mouth"><path id="lips" d="M88 126q12 4 24 0q-12 2-24 0z" fill="#7a2e22"/></g>
+    </g>
+  </svg>
+  <div class="sub"><p id="sub"></p></div>
+  <div class="bar"><i id="prog"></i></div>
+  <button class="go" id="go" aria-label="Reproducir el parte"><span>▶</span><small>Toca para ver el parte</small></button>
+</div>
+<script>
+// map image is 1000×900; each line says what to show: which map, where to zoom (image px), and an optional pin
+const SCRIPT=[
+  {t:'Buenos días. Esto es El Parte, el tiempo en el mapa.',img:1,z:1,x:500,y:450},
+  {t:'Hoy hay chubascos en el centro peninsular: en Madrid pueden caer hasta cinco litros a lo largo del día.',img:1,z:2.4,x:519,y:384,pin:true},
+  {t:'También lloverá algo en Córdoba y Málaga, aunque de forma débil.',img:1,z:2.2,x:466,y:625,pin:true},
+  {t:'En el norte, cielos tranquilos y sin lluvia, de Galicia a Cataluña.',img:1,z:1.7,x:560,y:230},
+  {t:'Las temperaturas, en ascenso: treinta grados en Sevilla y veintiséis en Zaragoza y Valencia.',img:2,z:1.9,x:420,y:560,pin:{x:386,y:616}},
+  {t:'Y en Canarias, veinticinco grados con algo de viento. Esto ha sido El Parte. ¡Feliz día!',img:2,z:2.6,x:150,y:700,pin:{x:122,y:688}},
+];
+const $=id=>document.getElementById(id),map=$('map'),m1=$('m1'),m2=$('m2'),pin=$('pin'),lips=$('lips'),arm=$('arm');
+$('day').textContent=new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
+// zoom so image point (x,y) sits in the middle of the map box
+function frameTo(s){const W=map.clientWidth,H=map.clientHeight,k=W/1000*s.z;let tx=W/2-s.x*k,ty=H/2-s.y*k;
+  tx=Math.min(0,Math.max(W-1000*k,tx));ty=Math.min(0,Math.max(H-900*k,ty));
+  for(const im of [m1,m2])im.style.transform=`translate(${tx}px,${ty}px) scale(${k*1000/W})`;
+  m1.classList.toggle('off',s.img!==1);m2.classList.toggle('off',s.img!==2);$('tag').textContent=s.img===1?'Nubes y lluvia':'Temperatura máxima';
+  const p=s.pin===true?{x:s.x,y:s.y}:s.pin;pin.classList.toggle('on',!!p);if(p){pin.style.left=(tx+p.x*k)+'px';pin.style.top=(ty+p.y*k)+'px';}
+  arm.style.transform=p?'rotate(-62deg)':'rotate(0deg)';}
+// mouth: open amount follows a jittery envelope while speaking, kicked on each word boundary
+let talking=false,kick=0;
+function mouth(){const o=talking?Math.max(0,Math.min(1,.25+.6*Math.abs(Math.sin(performance.now()/95))*(.5+.5*Math.random())+kick)):0;kick*=.8;
+  const h=2+o*13;lips.setAttribute('d',`M88 126q12 ${4+h*.2} 24 0q-12 ${h} -24 0z`);requestAnimationFrame(mouth);}
+requestAnimationFrame(mouth);
+const synth=window.speechSynthesis;let voice=null;
+function pickVoice(){const vs=synth?synth.getVoices():[];voice=vs.find(v=>/^es[-_]ES/i.test(v.lang))||vs.find(v=>/^es/i.test(v.lang))||null;}
+if(synth){pickVoice();synth.onvoiceschanged=pickVoice;}
+// speak one line; falls back to a timer (no voice on this device) so the clip still plays with subtitles
+function say(text){return new Promise(res=>{talking=true;let done=false;const end=()=>{if(done)return;done=true;talking=false;res();};
+  if(synth&&voice){const u=new SpeechSynthesisUtterance(text);u.voice=voice;u.lang=voice.lang;u.rate=1.02;u.onboundary=()=>{kick=.5;};u.onend=end;u.onerror=end;synth.speak(u);
+    setTimeout(end,text.length*120+4000);}
+  else setTimeout(end,text.length*62+600);});}
+async function play(){$('go').hidden=true;synth&&synth.cancel();
+  for(let i=0;i<SCRIPT.length;i++){const s=SCRIPT[i];frameTo(s);$('sub').textContent=s.t;$('prog').style.width=(i/SCRIPT.length*100)+'%';
+    await new Promise(r=>setTimeout(r,500));await say(s.t);await new Promise(r=>setTimeout(r,350));}
+  $('prog').style.width='100%';$('sub').textContent='';pin.classList.remove('on');arm.style.transform='';frameTo(SCRIPT[0]);
+  $('go').hidden=false;$('go').querySelector('small').textContent='Volver a ver';}
+$('go').onclick=play;addEventListener('resize',()=>frameTo(SCRIPT[0]));
+frameTo(SCRIPT[0]);
+</script>
