@@ -24,26 +24,25 @@ body{display:grid;place-items:center;padding:12px}
 .pin{position:absolute;width:5cqw;height:5cqw;margin:-2.5cqw 0 0 -2.5cqw;border-radius:50%;border:.9cqw solid var(--accent);z-index:2;opacity:0;transition:opacity .4s}
 .pin.on{opacity:1;animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(1.35)}}
-.sub{position:absolute;right:4cqw;bottom:8cqw;left:52cqw;min-height:22cqw;display:flex;align-items:flex-end;z-index:3}
+.sub{position:absolute;right:4cqw;bottom:5cqw;left:51cqw;min-height:22cqw;display:flex;align-items:flex-end;z-index:3}
 .sub p{margin:0;padding:2.4cqw 3cqw;border-radius:2.4cqw;background:rgba(32,45,53,.92);color:#fff;font:600 3.7cqw/1.35 var(--sans)}
 .sub p:empty{display:none}
 .bar{position:absolute;left:0;right:0;bottom:0;height:1.4cqw;background:rgba(32,45,53,.15);z-index:4}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s linear}
 .go{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(243,241,234,.55);border:0;cursor:pointer;font:inherit}
 .go[hidden]{display:none}.go span{display:grid;place-items:center;width:22cqw;height:22cqw;border-radius:50%;background:var(--ink);color:#fff;font-size:8cqw;padding-left:1.5cqw;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .go small{position:absolute;bottom:42%;transform:translateY(16cqw);font:600 3.4cqw var(--sans);color:var(--ink)}
-.note{position:absolute;left:56cqw;right:4cqw;top:121cqw;font:400 2.5cqw var(--sans);color:var(--soft);z-index:1}
-/* presenter: photo with a slow breath, a gentle sway while she talks and a turn toward the map when pointing */
-.host{position:absolute;left:-4cqw;bottom:0;width:64cqw;z-index:2;transform-origin:50% 100%;animation:breathe 4.5s ease-in-out infinite}
-.host img{display:block;width:100%;height:auto;transform-origin:50% 90%;transition:transform .8s cubic-bezier(.4,0,.2,1)}
-.host.talk img{animation:talk 2.6s ease-in-out infinite}.host.point img{transform:rotate(1.6deg) translateX(1cqw)}
-@keyframes breathe{50%{transform:scale(1.012)}}@keyframes talk{0%,100%{transform:rotate(0)}30%{transform:rotate(.8deg) translateY(-.3cqw)}65%{transform:rotate(-.6deg)}}
-@media (prefers-reduced-motion:reduce){.host,.host.talk img,.pin.on{animation:none}.map img{transition:opacity .6s}}
+.note{position:absolute;left:51cqw;right:4cqw;top:121cqw;font:400 2.5cqw var(--sans);color:var(--soft);z-index:1}
+/* presenter: framed portrait; one image per mouth shape (Nacho's sheet), swapped in time with the text */
+.host{position:absolute;left:4cqw;bottom:5cqw;width:44cqw;aspect-ratio:330/441;border-radius:3cqw;overflow:hidden;background:#d6d7d8;box-shadow:0 2cqw 6cqw rgba(0,0,0,.18);z-index:2;animation:breathe 4.5s ease-in-out infinite;transform-origin:50% 100%}
+.host img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}.host img.on{opacity:1}
+@keyframes breathe{50%{transform:scale(1.01)}}
+@media (prefers-reduced-motion:reduce){.host,.pin.on{animation:none}.map img{transition:opacity .6s}}
 </style>
 <div class="frame">
   <div class="top"><div class="lw">EL PARTE</div><div class="lb"><i></i></div><div class="lt"><span>El tiempo, en el mapa</span><span id="day"></span></div></div>
   <div class="map" id="map"><img id="m1" src="map_cielo.jpg" alt=""><img id="m2" class="off" src="map_temp.jpg" alt=""><div class="tag" id="tag">Nubes y lluvia</div><div class="pin" id="pin"></div></div>
   <div class="note">Muestra con datos de un día anterior. En la versión real el guion y el mapa salen de la previsión del momento.</div>
-  <div class="host" id="host"><img src="presentadora.webp" alt="Presentadora de El Parte"></div>
+  <div class="host" id="host" role="img" aria-label="Presentadora de El Parte"><img data-v="rest" src="v_rest.webp" alt="" class="on"><img data-v="a" src="v_a.webp" alt=""><img data-v="e" src="v_e.webp" alt=""><img data-v="i" src="v_i.webp" alt=""><img data-v="o" src="v_o.webp" alt=""><img data-v="u" src="v_u.webp" alt=""><img data-v="mbp" src="v_mbp.webp" alt=""><img data-v="fv" src="v_fv.webp" alt=""></div>
   <div class="sub"><p id="sub"></p></div>
   <div class="bar"><i id="prog"></i></div>
   <button class="go" id="go" aria-label="Reproducir el parte"><span>▶</span><small>Toca para ver el parte</small></button>
@@ -67,15 +66,28 @@ function frameTo(s){const W=map.clientWidth,H=map.clientHeight,k=W/1000*s.z;let 
   m1.classList.toggle('off',s.img!==1);m2.classList.toggle('off',s.img!==2);$('tag').textContent=s.img===1?'Nubes y lluvia':'Temperatura máxima';
   const p=s.pin===true?{x:s.x,y:s.y}:s.pin;pin.classList.toggle('on',!!p);if(p){pin.style.left=(tx+p.x*k)+'px';pin.style.top=(ty+p.y*k)+'px';}
   host.classList.toggle('point',!!p);}
-let talking=false;const setTalk=v=>{talking=v;host.classList.toggle('talk',v);};
+// lip sync: each letter becomes a mouth shape with a duration; the timeline runs on its own and jumps to
+// the word the voice is on whenever the browser reports a word boundary
+const VIS={};host.querySelectorAll('img').forEach(im=>VIS[im.dataset.v]=im);let cur='rest';
+const show=v=>{if(v===cur)return;VIS[cur].classList.remove('on');VIS[v].classList.add('on');cur=v;};
+function timeline(text){const t=text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');const seq=[],at=[];let ms=0;
+  for(let i=0;i<t.length;i++){const c=t[i];at[i]=ms;let v,d;
+    if('aeiou'.includes(c)){v=c;d=95;}else if('mbp'.includes(c)){v='mbp';d=70;}else if('fv'.includes(c)){v='fv';d=70;}
+    else if(/[sczxj]/.test(c)){v='i';d=60;}else if(/[a-z]/.test(c)){v='e';d=50;}else if(/[,;:]/.test(c)){v='rest';d=260;}else if(/[.!?]/.test(c)){v='rest';d=420;}else{v='rest';d=35;}
+    seq.push([ms,v]);ms+=d;}at[t.length]=ms;return {seq,at,len:ms};}
+let lip=null,lipRaf=0;
+function lipRun(text,rate){lip={...timeline(text),t0:performance.now(),rate};cancelAnimationFrame(lipRaf);
+  const tick=()=>{if(!lip)return;const el=(performance.now()-lip.t0)*lip.rate;let v='rest';for(const [m,x] of lip.seq){if(m>el)break;v=x;}show(el>lip.len?'rest':v);lipRaf=requestAnimationFrame(tick);};tick();}
+function lipSync(ci){if(lip&&lip.at[ci]!=null)lip.t0=performance.now()-lip.at[ci]/lip.rate;}
+function lipStop(){lip=null;cancelAnimationFrame(lipRaf);show('rest');}
 const synth=window.speechSynthesis;let voice=null;
 function pickVoice(){const vs=synth?synth.getVoices():[];voice=vs.find(v=>/^es[-_]ES/i.test(v.lang))||vs.find(v=>/^es/i.test(v.lang))||null;}
 if(synth){pickVoice();synth.onvoiceschanged=pickVoice;}
 // speak one line; falls back to a timer (no voice on this device) so the clip still plays with subtitles
-function say(text){return new Promise(res=>{setTalk(true);let done=false;const end=()=>{if(done)return;done=true;setTalk(false);res();};
-  if(synth&&voice){const u=new SpeechSynthesisUtterance(text);u.voice=voice;u.lang=voice.lang;u.rate=1.02;u.onend=end;u.onerror=end;synth.speak(u);
+function say(text){return new Promise(res=>{let done=false;const end=()=>{if(done)return;done=true;lipStop();res();};
+  if(synth&&voice){const u=new SpeechSynthesisUtterance(text);u.voice=voice;u.lang=voice.lang;u.rate=1.02;u.onstart=()=>lipRun(text,1.02);u.onboundary=e=>lipSync(e.charIndex);u.onend=end;u.onerror=end;synth.speak(u);
     setTimeout(end,text.length*120+4000);}
-  else setTimeout(end,text.length*62+600);});}
+  else{lipRun(text,1);setTimeout(end,timeline(text).len+300);}});}
 async function play(){$('go').hidden=true;document.querySelector('.note').hidden=true;synth&&synth.cancel();
   for(let i=0;i<SCRIPT.length;i++){const s=SCRIPT[i];frameTo(s);$('sub').textContent=s.t;$('prog').style.width=(i/SCRIPT.length*100)+'%';
     await new Promise(r=>setTimeout(r,500));await say(s.t);await new Promise(r=>setTimeout(r,350));}
