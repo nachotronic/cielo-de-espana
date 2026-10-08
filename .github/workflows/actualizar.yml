@@ -35,9 +35,11 @@ jobs:
       - name: Montar la página
         run: |
           node build.js
+          node parte.js || true
           mkdir -p _site
           cp cielo.html _site/index.html
           cp -r demo _site/demo
+          [ -f parte.json ] && cp parte.json _site/ || true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
